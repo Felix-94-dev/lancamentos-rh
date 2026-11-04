@@ -253,7 +253,7 @@ const Dados = (() => {
     //const uUsrs = usrs ? usrs.map(u => u.unidade) : [];
 
     //return [...new Set([...uFuncs, ...uUsrs].filter(Boolean))].sort();
-    return ["União", "Açude"];
+    return ["União", "Açude e Demais"];
   }
 
   /* ---------- Período (liberação da matriz) ---------- */
