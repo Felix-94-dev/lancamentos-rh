@@ -244,16 +244,9 @@ const Dados = (() => {
     if (error) throw new Error(error.message);
   }
 
-  async function unidades() {
-  //-function unidades() {
-    const { data: funcs } = await supabaseClient.from('funcionarios').select('unidade');
-    const { data: usrs } = await supabaseClient.from('usuarios').select('unidade');
-    
-    const uFuncs = funcs ? funcs.map(f => f.unidade) : [];
-    const uUsrs = usrs ? usrs.map(u => u.unidade) : [];
-
-    return [...new Set([...uFuncs, ...uUsrs].filter(Boolean))].sort();
-    //-return ["União", "Açude e Demais"];
+  
+ function unidades() {
+    return ["União", "Açude e Demais"];
   }
 
   /* ---------- Período (liberação da matriz) ---------- */
