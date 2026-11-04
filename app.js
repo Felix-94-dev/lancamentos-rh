@@ -14,6 +14,7 @@ const NOMES_STATUS = { fechado: "Fechado", aberto: "Aberto para lançamento", co
 const IMPRIME = ["concluido", "encerrado"]; // status em que a matriz pode imprimir (todas as linhas concluídas)
 
 let usuario = null;      // usuário logado
+let calculosFixos = null;   // contas gravadas no encerramento { matrícula: contas }; null = calcula na hora
 let funcionariosCache = []; // última lista carregada (para busca e edição)
 
 /* ---------- Login / sessão ---------- */
@@ -48,7 +49,7 @@ Dados.aoPerderSessao(() => {
   $("#login-erro").hidden = false;
 });
 
-function iniciarApp() {
+async function iniciarApp() {
   $("#tela-login").hidden = true;
   $("#tela-app").hidden = false;
   document.body.dataset.papel = usuario.papel; // o CSS usa isto para esconder itens da matriz
@@ -57,7 +58,7 @@ function iniciarApp() {
   // Competência padrão = mês atual (formato AAAA-MM)
   $("#competencia").value = new Date().toISOString().slice(0, 7);
 
-  montarSeletoresUnidade();
+  await montarSeletoresUnidade();
 
   abrirAba(usuario.papel === "matriz" ? "funcionarios" : "lancamentos");
   iniciarObservacao();
@@ -65,7 +66,8 @@ function iniciarApp() {
 
 /* Seletor de unidade da aba Lançamentos (matriz escolhe; lançador fica fixo na sua) e filtro de filial do
    cadastro. Refaz as listas mantendo a escolha atual; chamada de novo quando surge unidade nova. */
-function montarSeletoresUnidade() {
+async function montarSeletoresUnidade() {
+  await Dados.carregarUnidades();
   const sel = $("#unidade"), escolhida = sel.value;
   const unidades = usuario.papel === "matriz" ? Dados.unidades() : [usuario.unidade];
   sel.innerHTML = unidades.map((u) => `<option>${esc(u)}</option>`).join("");
@@ -163,7 +165,7 @@ $("#form-usuario").addEventListener("submit", async (e) => {
     usuario = Dados.sessao() || usuario;          // se alterou o próprio cadastro, atualiza o nome no topo
     $("#usuario-info").textContent = usuario.nome;
     $("#dlg-usuario").close();
-    montarSeletoresUnidade(); // login de lançador pode ter criado uma unidade nova
+    await montarSeletoresUnidade(); // login de lançador pode ter criado uma unidade nova
     carregarUsuarios();
   } catch (err) {
     $("#usu-erro").textContent = err.message;
@@ -259,7 +261,7 @@ $("#form-func").addEventListener("submit", async (e) => {
       ativo: $("#f-ativo").checked,
     });
     $("#dlg-func").close();
-    montarSeletoresUnidade(); // se a unidade é nova, já aparece nos filtros e na aba Lançamentos
+    await montarSeletoresUnidade(); // se a unidade é nova, já aparece nos filtros e na aba Lançamentos
     carregarFuncionarios();
   } catch (err) {
     $("#func-erro").textContent = err.message;
@@ -292,9 +294,11 @@ function lerLinha(tr) {
   tr.querySelectorAll("input[data-tipo]").forEach((i) => (v[i.dataset.tipo] = i.value));
   return v;
 }
+/* Contas da linha: as gravadas no encerramento (histórico) ou, com o mês aberto, calculadas agora */
+const contasDa = (tr) => calculosFixos?.[tr.dataset.cod] ?? calcular(Number(tr.dataset.sal), lerLinha(tr));
 /* Recalcula as colunas calculadas da linha (só a matriz as vê) */
 function preencherCalculos(tr) {
-  const r = calcular(Number(tr.dataset.sal), lerLinha(tr));
+  const r = contasDa(tr);
   tr.querySelectorAll("[data-calc]").forEach((td) => (td.textContent = fmt(r[td.dataset.calc], td.dataset.un)));
   // 119 vazio = valor sugerido (base ÷ divisor), mostrado em cinza dentro do campo
   const campo119 = tr.querySelector('input[data-tipo="dsr119"]');
@@ -324,8 +328,17 @@ async function carregarLancamentos() {
     const [status, todos, valores, linhas] = await Promise.all([
       Dados.statusPeriodo(comp, uni), Dados.funcionarios(), Dados.lancamentos(comp, uni), Dados.statusLinhas(comp, uni),
     ]);
-    const lista = todos.filter((f) => f.unidade === uni && f.ativo);
     const matriz = usuario.papel === "matriz";
+    let lista = todos.filter((f) => f.unidade === uni && f.ativo);
+    // Mês encerrado: mostra a foto do encerramento (salário, contas e lista de quem estava), não o cadastro de hoje
+    calculosFixos = null;
+    if (matriz && status === "encerrado") {
+      const foto = await Dados.fechamento(comp, uni);
+      if (foto.length) {
+        lista = foto.map((r) => ({ codigo: r.codigo, nome: r.nome, funcao: r.funcao, salario: r.salario, valores: r.valores }));
+        calculosFixos = Object.fromEntries(foto.map((r) => [r.codigo, r.calculos]));
+      }
+    }
     const concluidas = lista.filter((f) => linhas[f.codigo] === "concluido").length;
     $("#status-periodo").className = `status status--${status}`;
     $("#status-periodo").textContent = NOMES_STATUS[status];
@@ -339,6 +352,9 @@ async function carregarLancamentos() {
     $("#lista-satelite").hidden = matriz;
     if (status === "fechado" && !matriz) mostrarMsg("Aguardando a matriz liberar o período.");
     if (status === "encerrado" && !matriz) mostrarMsg("A matriz encerrou esta filial: os lançamentos estão somente para consulta.");
+    if (status === "encerrado" && matriz) mostrarMsg(calculosFixos
+      ? "Histórico fixo: salários, contas e funcionários como estavam no encerramento."
+      : "Encerrado antes do histórico fixo: valores calculados com o cadastro atual. Reabra e encerre de novo para congelar.");
     if (status === "aberto" && matriz) mostrarMsg("Atenção: esta filial ainda não concluiu todas as linhas; os números podem mudar.");
 
     // Lançador: lista de funcionários + formulário
@@ -351,20 +367,20 @@ async function carregarLancamentos() {
       th("Salário", "num", "salario") + th("Função", "", "funcao") +
       cols.map((c) => th(c.rotulo, "num" + (c.tipo === "calc" ? " calc" : ""), c.id, c.un)).join("") + "</tr>";
     $("#corpo-lanc").innerHTML = lista.length ? lista.map((f) => {
-      const v = valores[f.codigo] || {};
+      const v = f.valores ?? valores[f.codigo] ?? {};
       const ok = linhas[f.codigo] === "concluido";
       const marca = status === "fechado" ? "" : ok ? "mat-ok" : "mat-aberta";
       const leitor = status === "fechado" ? "" : `<span class="so-leitor"> ${ok ? "concluído" : "em aberto"}</span>`;
       const celulas = cols.map((c) => c.tipo === "calc"
         ? `<td class="num" data-col="${c.id}" data-calc="${c.id}" data-un="${c.un}"></td>`
         : `<td class="num" data-col="${c.id}" data-un="${c.un}"><input type="${c.un === "t" ? "text" : "number"}"
-            step="0.01" min="0" data-tipo="${c.id}" value="${esc(v[c.id] ?? "")}" ${c.tipo === "mat" ? "" : "disabled"}
+            step="0.01" min="0" data-tipo="${c.id}" value="${esc(v[c.id] ?? "")}" ${c.tipo === "mat" && !calculosFixos ? "" : "disabled"}
             aria-label="${esc(c.rotulo)} de ${esc(f.nome)}"></td>`).join("");
       return `<tr data-cod="${esc(f.codigo)}" data-sal="${f.salario}">
         <td class="${marca}" data-col="matricula">${esc(f.codigo)}${leitor}</td><td data-col="nome">${esc(f.nome)}</td>
         <td class="num" data-col="salario">${moeda(f.salario)}</td><td data-col="funcao">${esc(f.funcao)}</td>${celulas}</tr>`;
     }).join("") : `<tr><td colspan="9">Nenhum funcionário ativo nesta unidade.</td></tr>`;
-    document.querySelectorAll("#corpo-lanc tr[data-cod]").forEach(preencherCalculos);
+    document.querySelectorAll("#corpo-lanc tr[data-cod]").forEach((tr) => preencherCalculos(tr));
   } catch (err) { mostrarMsg(err.message); }
 }
 
@@ -456,7 +472,7 @@ $("#form-imprimir").addEventListener("submit", async (e) => {
    texto (ex.: Controle Nice) não vazio, ou número diferente de zero (0 e vazio contam como sem dado).
    Colunas de conta e o 119 em branco usam o valor calculado, que é o mesmo que sai impresso. */
 function temDadoNasColunas(tr, ids) {
-  const v = lerLinha(tr), r = calcular(Number(tr.dataset.sal), v);
+  const v = lerLinha(tr), r = contasDa(tr);
   return ids.some((id) => {
     if (id in r) return Math.abs(r[id]) >= 0.005;             // conta (menos de 1 centavo = zero)
     const bruto = String(v[id] ?? "").trim();

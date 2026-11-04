@@ -244,10 +244,18 @@ const Dados = (() => {
     if (error) throw new Error(error.message);
   }
 
-  
- function unidades() {
-    return ["União", "Açude e Demais"];
+  /* Unidades = as que existem em funcionários ou usuários. A lista fica em cache para as telas lerem sem esperar. */
+  let listaUnidades = [];
+  async function carregarUnidades() {
+    exigirLogin();
+    if (!souMatriz()) { listaUnidades = [atual.unidade]; return; }
+    const [func, usr] = await Promise.all([
+      buscarTudo(() => supabaseClient.from("funcionarios").select("unidade").order("unidade")),
+      supabaseClient.from("usuarios").select("unidade"),
+    ]);
+    listaUnidades = [...new Set([...func, ...(usr.data || [])].map((x) => x.unidade).filter(Boolean))].sort();
   }
+  const unidades = () => listaUnidades;
 
   /* ---------- Período (liberação da matriz) ---------- */
   async function liberacao(comp, uni) {
@@ -336,8 +344,27 @@ const Dados = (() => {
     const statusAtual = await statusPeriodo(comp, uni);
     if (statusAtual !== "concluido") throw new Error("Só dá para encerrar quando todas as linhas estiverem concluídas.");
 
+    // Foto do mês: nome, função, salário, lançamentos e contas como estão agora. O histórico lê daqui.
+    const [funcs, vals] = await Promise.all([funcionarios(), lancamentos(comp, uni)]);
+    const foto = funcs.filter((f) => f.unidade === uni && f.ativo).map((f) => ({
+      competencia: comp, unidade: uni, codigo: f.codigo, nome: f.nome, funcao: f.funcao, salario: f.salario,
+      valores: vals[f.codigo] || {}, calculos: calcular(f.salario, vals[f.codigo] || {}),
+    }));
+    const del = await supabaseClient.from('fechamentos').delete().eq('competencia', comp).eq('unidade', uni);
+    if (del.error) throw new Error(del.error.message);
+    const ins = await supabaseClient.from('fechamentos').insert(foto);
+    if (ins.error) throw new Error(ins.error.message);
+
     const { error } = await supabaseClient.from('periodos').upsert([{ competencia: comp, unidade: uni, status: "encerrado" }]);
     if (error) throw new Error(error.message);
+  }
+
+  /* Foto gravada no encerramento (só a matriz lê: tem salário). Vazio = mês encerrado antes deste recurso. */
+  async function fechamento(comp, uni) {
+    exigirLogin();
+    if (!souMatriz()) throw new Error("Só a matriz consulta o fechamento.");
+    return buscarTudo(() => supabaseClient.from('fechamentos').select('*')
+      .eq('competencia', comp).eq('unidade', uni).order('codigo'));
   }
 
   async function concluirLinha(comp, uni, codigo) {
@@ -442,7 +469,7 @@ const Dados = (() => {
   }
 
   return { 
-    aoPerderSessao: aoPerderSessaoDefinir, observar, entrar, sair, sessao, usuarios, salvarUsuario, funcionarios, salvarFuncionario, unidades,
+    aoPerderSessao: aoPerderSessaoDefinir, observar, entrar, sair, sessao, usuarios, salvarUsuario, funcionarios, salvarFuncionario, unidades, carregarUnidades, fechamento,
     statusPeriodo, statusLinhas, liberar, concluirLinha, encerrarFilial, reabrirFilial, lancamentos, salvarLancamento 
   };
 })();
