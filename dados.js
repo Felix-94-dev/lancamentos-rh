@@ -253,7 +253,7 @@ const Dados = (() => {
     //const uUsrs = usrs ? usrs.map(u => u.unidade) : [];
 
     //return [...new Set([...uFuncs, ...uUsrs].filter(Boolean))].sort();
-    return ["Cidade A", "Cidade B", "Unidade Central"];
+    return ["União", "Açude"];
   }
 
   /* ---------- Período (liberação da matriz) ---------- */
