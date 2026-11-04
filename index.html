@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lançamentos de pessoal</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============ TELA DE LOGIN ============ -->
+  <main id="tela-login" class="login">
+    <form id="form-login" class="login__caixa" onsubmit="return false"> <!-- o app.js trata o envio; isto evita recarregar a página se ele não carregar -->
+      <h1>Lançamentos de pessoal</h1>
+      <label>Usuário
+        <input id="login-usuario" autocomplete="username" required>
+      </label>
+      <label>Senha
+        <input id="login-senha" type="password" autocomplete="current-password" required>
+      </label>
+      <p id="login-erro" class="erro" role="alert" hidden></p>
+      <button class="btn btn--primario" type="submit">Entrar</button>
+    </form>
+  </main>
+
+  <!-- ============ APLICAÇÃO (após o login) ============ -->
+  <div id="tela-app" hidden>
+    <header class="topo">
+      <strong>Lançamentos de pessoal</strong>
+      <!-- Abas: "Funcionários" só aparece para a matriz (apenas visual; a trava real fica no banco) -->
+      <nav class="abas">
+        <button class="aba so-matriz" data-aba="funcionarios">Funcionários</button>
+        <button class="aba" data-aba="lancamentos">Lançamentos</button>
+        <button class="aba so-matriz" data-aba="usuarios">Usuários</button>
+      </nav>
+      <button id="btn-atualizar" class="btn" title="Recarregar os dados da tela atual">Atualizar</button>
+      <span id="usuario-info" class="topo__usuario"></span>
+      <button id="btn-sair" class="btn">Sair</button>
+    </header>
+
+    <main class="conteudo">
+
+      <!-- Aba: cadastro de funcionários (matriz) -->
+      <section id="aba-funcionarios" hidden>
+        <div class="barra">
+          <input id="busca-func" type="search" placeholder="Buscar por nome ou matrícula">
+          <select id="filtro-filial" aria-label="Filtrar por filial"></select>
+          <button id="btn-novo-func" class="btn btn--primario">Novo funcionário</button>
+        </div>
+        <div class="tabela-rolagem">
+          <table>
+            <thead>
+              <tr><th>Matrícula</th><th>Nome</th><th>Função</th><th>Filial</th><th class="num">Salário</th><th>Situação</th><th></th></tr>
+            </thead>
+            <tbody id="corpo-func"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Aba: lançamentos do período (matriz e satélites) -->
+      <section id="aba-lancamentos" hidden>
+        <div class="barra">
+          <label>Competência <input id="competencia" type="month"></label>
+          <label>Unidade <select id="unidade"></select></label>
+          <span id="status-periodo" class="status"></span>
+          <span id="contagem" class="contagem"></span>
+          <span id="acoes" class="acoes"></span>
+          <button id="btn-imprimir" class="btn so-matriz" type="button">Imprimir colunas</button>
+          <button id="btn-contraprova" class="btn so-lancador" type="button" title="Imprime ou salva em PDF o lançamento, com todos os nomes e colunas">Salvar contraprova</button>
+        </div>
+        <p id="msg-lanc" class="aviso" role="status" hidden></p>
+        <!-- Lançador: lista de funcionários (amarelo = em aberto, verde = concluído) -->
+        <div id="lista-satelite" class="lista-sat" hidden></div>
+        <!-- Matriz: tabela com as 31 colunas -->
+        <div id="caixa-tabela" class="tabela-rolagem">
+          <table id="tabela-lanc">
+            <thead id="cab-lanc"></thead>
+            <tbody id="corpo-lanc"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Aba: logins e senhas (só a matriz) -->
+      <section id="aba-usuarios" hidden>
+        <div class="barra">
+          <input id="busca-usuario" type="search" placeholder="Buscar por login ou nome">
+          <button id="btn-novo-usuario" class="btn btn--primario">Novo usuário</button>
+        </div>
+        <p id="msg-usuarios" class="aviso" role="status" hidden></p>
+        <div class="tabela-rolagem">
+          <table>
+            <thead>
+              <tr><th>Login</th><th>Nome</th><th>Perfil</th><th>Unidade</th><th>Situação</th><th></th></tr>
+            </thead>
+            <tbody id="corpo-usuarios"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ============ DIÁLOGO: novo/editar usuário ============ -->
+  <dialog id="dlg-usuario">
+    <form id="form-usuario" method="dialog" class="dialogo" autocomplete="off">
+      <h2 id="usu-titulo">Usuário</h2>
+      <label>Login <input id="u-login" required autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+      <label>Nome <input id="u-nome" required></label>
+      <label>Perfil
+        <select id="u-papel">
+          <option value="lancador">Lançador (filial)</option>
+          <option value="matriz">Matriz</option>
+        </select>
+      </label>
+      <label id="u-unidade-box">Unidade (filial)
+        <input id="u-unidade" list="u-unidades" autocomplete="off">
+        <datalist id="u-unidades"></datalist>
+      </label>
+      <label>Senha <span id="u-senha-dica" class="dica"></span>
+        <input id="u-senha" type="password" autocomplete="new-password">
+      </label>
+      <label class="check"><input id="u-mostrar" type="checkbox"> Mostrar senha</label>
+      <label class="check"><input id="u-ativo" type="checkbox" checked> Ativo (pode entrar no sistema)</label>
+      <p id="usu-erro" class="erro" role="alert" hidden></p>
+      <div class="dialogo__acoes">
+        <button type="button" id="usu-cancelar" class="btn">Cancelar</button>
+        <button type="submit" class="btn btn--primario">Salvar usuário</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ============ DIÁLOGO: novo/editar funcionário ============ -->
+  <dialog id="dlg-func">
+    <form id="form-func" method="dialog" class="dialogo">
+      <h2 id="dlg-titulo">Funcionário</h2>
+      <label>Código <input id="f-codigo" required></label>
+      <label>Nome <input id="f-nome" required></label>
+      <label>Função <input id="f-funcao" required></label>
+      <label>Unidade
+        <span class="combo">
+          <select id="f-unidade" required></select>
+          <input id="f-unidade-nova" placeholder="Nome da nova unidade" autocomplete="off" hidden>
+          <button type="button" id="btn-nova-unidade" class="btn" title="Cadastrar uma nova unidade" aria-label="Cadastrar nova unidade">+</button>
+        </span>
+      </label>
+      <label>Salário <input id="f-salario" type="number" step="0.01" min="0" required></label>
+      <label class="check"><input id="f-ativo" type="checkbox" checked> Ativo</label>
+      <p id="func-erro" class="erro" role="alert" hidden></p>
+      <div class="dialogo__acoes">
+        <button type="button" id="btn-cancelar" class="btn">Cancelar</button>
+        <button type="submit" class="btn btn--primario">Salvar funcionário</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- DIÁLOGO: formulário de lançamento de um funcionário (satélite) -->
+  <dialog id="dlg-lanc" class="larga">
+    <form id="form-lanc" method="dialog" class="dialogo">
+      <h2 id="lanc-titulo">Lançamento</h2>
+      <p id="lanc-sub" class="dica"></p>
+      <div id="lanc-campos" class="grade-campos"></div>
+      <p id="lanc-erro" class="erro" role="alert" hidden></p>
+      <div class="dialogo__acoes">
+        <button type="button" id="lanc-fechar" class="btn">Fechar (continua em aberto)</button>
+        <button type="submit" id="lanc-concluir" class="btn btn--primario">Concluído</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- DIÁLOGO: escolher colunas para imprimir (matriz) -->
+  <dialog id="dlg-imprimir" class="larga">
+    <form id="form-imprimir" method="dialog" class="dialogo">
+      <h2>Imprimir colunas</h2>
+      <p class="dica">Matrícula e nome saem sempre. Marque as demais colunas.</p>
+      <label class="check"><input id="imp-so-dados" type="checkbox" checked> Imprimir só quem tem dados nas colunas marcadas</label>
+      <div class="acoes">
+        <button type="button" id="imp-todas" class="btn">Marcar todas</button>
+        <button type="button" id="imp-nenhuma" class="btn">Limpar</button>
+      </div>
+      <div id="imp-colunas" class="grade-campos"></div>
+      <p id="imp-erro" class="erro" role="alert" hidden></p>
+      <div class="dialogo__acoes">
+        <button type="button" id="imp-cancelar" class="btn">Cancelar</button>
+        <button type="submit" class="btn btn--primario">Imprimir</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Área montada só para a impressão (invisível na tela) -->
+  <div id="area-impressao" class="so-impressao"></div>
+
+  <!-- Aviso visível se algum arquivo não for encontrado (todos devem ficar na mesma pasta do index.html) -->
+  <script>
+    function falhaCarga(arquivo) {
+      var e = document.getElementById("login-erro");
+      e.textContent = "Não consegui carregar " + arquivo + ". Coloque style.css, dados.js e app.js na mesma pasta do index.html.";
+      e.hidden = false;
+    }
+  </script>
+  <!-- dados.js primeiro (camada de dados), depois app.js (telas) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
+  <script src="dados.js" onerror="falhaCarga('dados.js')"></script>
+  <script src="app.js" onerror="falhaCarga('app.js')"></script>
+</body>
+</html>
