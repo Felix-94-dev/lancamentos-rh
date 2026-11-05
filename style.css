@@ -105,7 +105,7 @@ html[data-tema="dark"] .lua { transform: none; opacity: 1; }
 .login__luz-borda {
   position: relative; width: 100%; max-width: 380px; padding: 2px; border-radius: 18px;
   box-shadow: 0 24px 48px rgba(0, 0, 0, .45), 0 0 32px rgba(0, 140, 255, .16);
-  animation: entrarCaixa .2s cubic-bezier(.2, .8, .2, 1) both, girarLuzBorda 4.2s linear infinite;
+  animation: entrarCaixa .7s cubic-bezier(.2, .8, .2, 1) both, girarLuzBorda 3.5s linear infinite;
 }
 .login__luz-borda::before {
   content: ""; position: absolute; inset: 0; padding: 2px; border-radius: inherit; pointer-events: none;

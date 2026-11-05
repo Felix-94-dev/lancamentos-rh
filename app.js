@@ -721,4 +721,4 @@ $("#btn-tema").addEventListener("click", async () => {
     else await cenaInterruptor(escurecer);
   } finally { trocandoTema = false; }
 });
-$("#rotulo-tema").textContent = raiz.dataset.tema === "dark" ? "Modo escuro" : "Modo claro";
+$("#rotulo-tema").textContent = raiz.dataset.tema === "dark" ? "Modo claro" : "Modo escuro";
