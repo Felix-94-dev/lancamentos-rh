@@ -101,7 +101,7 @@ html[data-tema="dark"] .lua { transform: none; opacity: 1; }
 }
 @keyframes zoomInvertido { 0% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
-/* Borda de luz: o feixe é recortado por máscara e só aparece no anel de 2px (nada de luz atrás do vidro) */
+/* Borda de luz */
 .login__luz-borda {
   position: relative; width: 100%; max-width: 380px; padding: 2px; border-radius: 18px;
   box-shadow: 0 24px 48px rgba(0, 0, 0, .45), 0 0 32px rgba(0, 140, 255, .16);
@@ -114,7 +114,7 @@ html[data-tema="dark"] .lua { transform: none; opacity: 1; }
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;                      /* tudo menos o miolo => sobra só o anel */
+  mask-composite: exclude;                     
 }
 @keyframes girarLuzBorda { to { --angulo: 360deg; } }
 @keyframes entrarCaixa { from { transform: translateY(24px) scale(.97); } to { transform: none; } }
@@ -154,15 +154,15 @@ html[data-tema="dark"] .lua { transform: none; opacity: 1; }
 .login__caixa .btn--primario:hover { background: linear-gradient(135deg, #23a276, #14b3a8); transform: translateY(-1px); box-shadow: 0 12px 26px rgba(18, 163, 154, .38); }
 .login__caixa .btn--primario:active { transform: scale(.99); }
 
-/* Carregando: 8 bolinhas girando, cobrem o login até a tela principal ficar pronta */
+/* Carregando*/
 .login__carregando {
   position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 18px; color: #fff;
   background: rgba(5, 12, 24, .62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  animation: aparecer .25s ease .15s both;      /* só aparece após 150ms: login rápido não pisca a tela */
+  animation: aparecer .25s ease .15s both;      
 }
 .login__carregando p { margin: 0; font-size: 14px; letter-spacing: .4px; color: rgba(255, 255, 255, .85); }
 .login__bolinhas { position: relative; width: 64px; height: 64px; animation: girarBolinhas 1.1s linear infinite; }
-.login__bolinhas span {                          /* brilho e tamanho crescem a cada bolinha (cauda de cometa) */
+.login__bolinhas span {                         
   position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
   background: #00d9ff; box-shadow: 0 0 10px #00d9ff; opacity: calc(.15 + var(--i) * .12);
   transform: rotate(calc(var(--i) * 45deg)) translateY(-26px) scale(calc(.4 + var(--i) * .085));
@@ -180,12 +180,12 @@ html[data-tema="dark"] .lua { transform: none; opacity: 1; }
 .olho__abertura { transform-origin: 12px 12px; transition: transform .25s ease; }
 .olho__pupila { transform-origin: 12px 12px; transition: transform .25s ease; }
 .olho__risco { stroke-dasharray: 23; stroke-dashoffset: 0; transition: stroke-dashoffset .25s ease; }
-.olho[aria-pressed="false"] .olho__abertura { transform: scaleY(.12); }   /* pálpebra fechada */
+.olho[aria-pressed="false"] .olho__abertura { transform: scaleY(.12); }   
 .olho[aria-pressed="false"] .olho__pupila { transform: scale(0); }
-.olho[aria-pressed="true"] .olho__risco { stroke-dashoffset: 23; }        /* risco "se apaga" */
+.olho[aria-pressed="true"] .olho__risco { stroke-dashoffset: 23; }        
 .olho[aria-pressed="true"] { color: var(--verde); }
 
-/* Topo e abas */
+
 .topo {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
   padding: 10px 20px; background: var(--superficie); border-bottom: 1px solid var(--linha);
@@ -220,7 +220,7 @@ tbody tr:last-child td { border-bottom: 0; }
 td input[type="number"], td input[type="text"] { width: 110px; text-align: right; padding: 5px 8px; }
 th.calc { background: var(--calc-cab); color: var(--ambar); }  /* colunas com conta, como o cabeçalho laranja da planilha */
 td[data-calc] { background: var(--calc-cel); }
-/* Célula 103 - Nº h. extras destacada (o campo de dentro também precisa mudar, senão o fundo branco cobre o amarelo) */
+/* Célula 103 - Nº h. extras destacada  */
 td.destaque-amarelo, td.destaque-amarelo input { background: var(--amarelo); }
 td.destaque-amarelo input { border-color: var(--amarelo-borda); }
 .inativo { color: var(--suave); }
@@ -232,7 +232,7 @@ dialog::backdrop { background: rgba(27, 42, 36, .45); }
 .dialogo__acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 .check { display: flex; align-items: center; gap: 8px; }
 
-/* Perfil lançador: esconde itens exclusivos da matriz (só visual; a trava real é no banco) */
+/* Perfil lançador: esconde itens exclusivos da matriz */
 body[data-papel="lancador"] .so-matriz { display: none; }
 body[data-papel="matriz"] .so-lancador { display: none; }
 
@@ -310,8 +310,8 @@ html[data-tema="dark"] .boneco__sombra { background: rgba(0, 0, 0, .65); }
   #area-impressao table { width: 100%; font-size: 8.5pt; }
   #area-impressao th, #area-impressao td { border: 1px solid #000; padding: 3px 5px; white-space: normal; }
   #area-impressao th { background: #eee; color: #000; }
-  #area-impressao thead { display: table-header-group; } /* repete o cabeçalho em cada página */
-  #area-impressao tr { break-inside: avoid; }             /* não corta uma linha ao meio entre páginas */
+  #area-impressao thead { display: table-header-group; } 
+  #area-impressao tr { break-inside: avoid; }             
   #area-impressao .num { text-align: right; }
 }
 
