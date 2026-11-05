@@ -3,30 +3,55 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lançamentos RH</title>
+  <title>Lançamentos de pessoal</title>
   <link rel="stylesheet" href="style.css">
+  <script>try { document.documentElement.dataset.tema = localStorage.getItem("tema") || ""; } catch (e) {}</script> <!-- aplica o tema antes de desenhar, sem piscar -->
 </head>
 <body>
 
   <!-- ============ TELA DE LOGIN ============ -->
   <main id="tela-login" class="login">
-    <form id="form-login" class="login__caixa" onsubmit="return false"> <!-- o app.js trata o envio; isto evita recarregar a página se ele não carregar -->
-      <h1>Lançamentos RH</h1>
-      <label>Usuário
-        <input id="login-usuario" autocomplete="username" required>
-      </label>
-      <label>Senha
-        <input id="login-senha" type="password" autocomplete="current-password" required>
-      </label>
-      <p id="login-erro" class="erro" role="alert" hidden></p>
-      <button class="btn btn--primario" type="submit">Entrar</button>
-    </form>
+    <div class="login__background-zoom"></div>
+    <div class="login__luz-borda">
+      <form id="form-login" class="login__caixa" onsubmit="return false"> <!-- o app.js trata o envio; isto evita recarregar a página se ele não carregar -->
+        <div class="login__logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 13.7c2.7.1 4.5 1.8 4.5 4.8"/></svg>
+        </div>
+        <h1>Lançamentos RH</h1>
+        <p class="login__sub">Entre para continuar</p>
+        <label>Usuário
+          <input id="login-usuario" autocomplete="username" required>
+        </label>
+        <label>Senha
+          <span class="senha-caixa">
+            <input id="login-senha" type="password" autocomplete="current-password" required>
+            <button type="button" id="btn-ver-senha" class="olho" aria-label="Mostrar senha" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <g class="olho__abertura"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle class="olho__pupila" cx="12" cy="12" r="3"/></g>
+                <path class="olho__risco" d="M4 4l16 16"/>
+              </svg>
+            </button>
+          </span>
+        </label>
+        <p id="login-erro" class="erro" role="alert" hidden></p>
+        <button class="btn btn--primario" type="submit">Entrar</button>
+      </form>
+    </div>
+
+    <!-- Carregando: aparece ao clicar em Entrar e some quando a tela principal está pronta -->
+    <div id="login-carregando" class="login__carregando" role="status" hidden>
+      <div class="login__bolinhas" aria-hidden="true">
+        <span style="--i:0"></span><span style="--i:1"></span><span style="--i:2"></span><span style="--i:3"></span>
+        <span style="--i:4"></span><span style="--i:5"></span><span style="--i:6"></span><span style="--i:7"></span>
+      </div>
+      <p>Entrando…</p>
+    </div>
   </main>
 
   <!-- ============ APLICAÇÃO (após o login) ============ -->
   <div id="tela-app" hidden>
     <header class="topo">
-      <strong>Lançamentos RH</strong>
+      <strong>Lançamentos de pessoal</strong>
       <!-- Abas: "Funcionários" só aparece para a matriz (apenas visual; a trava real fica no banco) -->
       <nav class="abas">
         <button class="aba so-matriz" data-aba="funcionarios">Funcionários</button>
@@ -34,6 +59,13 @@
         <button class="aba so-matriz" data-aba="usuarios">Usuários</button>
       </nav>
       <button id="btn-atualizar" class="btn" title="Recarregar os dados da tela atual">Atualizar</button>
+      <button id="btn-tema" class="btn btn--tema" title="Alternar entre tema claro e escuro">
+        <svg class="astro" viewBox="0 0 24 24" aria-hidden="true">
+          <g class="sol"><circle cx="12" cy="12" r="4.5"/><g class="raios"><path d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></g></g>
+          <g class="lua"><g class="lua__balanco"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a6.8 6.8 0 0 0 10.7 10.7z"/><circle class="estrela" cx="18.5" cy="4.5" r=".9"/><circle class="estrela estrela--b" cx="21.5" cy="8.5" r=".7"/></g></g>
+        </svg>
+        <span id="rotulo-tema">Modo Escuro</span>
+      </button>
       <span id="usuario-info" class="topo__usuario"></span>
       <button id="btn-sair" class="btn">Sair</button>
     </header>
@@ -187,6 +219,30 @@
   </dialog>
 
   <!-- Área montada só para a impressão (invisível na tela) -->
+  <!-- Cena do modo escuro: o boneco vem da direita e vira o interruptor (ver cenaInterruptor no app.js) -->
+  <div id="cena" class="cena" aria-hidden="true" hidden>
+    <div id="interruptor" class="interruptor" data-ligado="true"><span class="interruptor__alavanca"></span></div>
+    <div id="boneco" class="boneco"><span class="boneco__sombra"></span><div class="boneco__giro">
+      <!-- Pernas e braços têm duas partes (coxa/joelho, braço/cotovelo); o tronco e a cabeça balançam junto -->
+      <svg viewBox="0 0 44 88">
+        <g class="perna perna-b"><rect x="19.5" y="50" width="6" height="15" rx="3" fill="var(--suave)"/><g class="joelho joelho-b"><rect x="19.7" y="62.5" width="5.6" height="15.5" rx="2.8" fill="var(--suave)"/><rect x="15.5" y="76" width="10.5" height="4.4" rx="2.2" fill="var(--suave)"/></g></g>
+        <g class="perna perna-a"><rect x="17" y="50" width="6" height="15" rx="3" fill="var(--tinta)"/><g class="joelho joelho-a"><rect x="17.2" y="62.5" width="5.6" height="15.5" rx="2.8" fill="var(--tinta)"/><rect x="13" y="76" width="10.5" height="4.4" rx="2.2" fill="var(--tinta)"/></g></g>
+        <g class="tronco">
+          <g class="braco braco-b"><rect x="19.5" y="24" width="5" height="14.5" rx="2.5" fill="var(--verde-escuro)"/><g class="cotovelo cotovelo-b"><rect x="19.7" y="36" width="4.6" height="12" rx="2.3" fill="#C99A70"/><circle cx="22" cy="48" r="2.6" fill="#C99A70"/></g></g>
+          <rect x="14" y="21" width="16" height="32" rx="6" fill="var(--verde)"/>
+          <g class="cabeca">
+            <circle cx="25.6" cy="12.8" r="1.8" fill="#D4A47C"/>
+            <circle cx="22" cy="11" r="9" fill="#E8B98D"/>
+            <path d="M13 10a9 9 0 0 1 18 0z" fill="var(--verde-escuro)"/><rect x="8" y="8.5" width="10" height="3" rx="1.5" fill="var(--verde-escuro)"/>
+            <ellipse class="olho" cx="17" cy="14" rx="1.3" ry="1.5" fill="#1B2A24"/>
+            <path d="M14.6 18a2.6 2.2 0 0 0 3.8 0" fill="none" stroke="#8A5A3C" stroke-width=".9" stroke-linecap="round"/>
+          </g>
+          <g class="braco braco-a"><rect x="19.5" y="24" width="5" height="14.5" rx="2.5" fill="var(--verde-escuro)"/><g class="cotovelo cotovelo-a"><rect x="19.7" y="36" width="4.6" height="12" rx="2.3" fill="#E8B98D"/><circle cx="22" cy="48" r="2.6" fill="#E8B98D"/></g></g>
+        </g>
+      </svg>
+    </div></div>
+  </div>
+
   <div id="area-impressao" class="so-impressao"></div>
 
   <!-- Aviso visível se algum arquivo não for encontrado (todos devem ficar na mesma pasta do index.html) -->

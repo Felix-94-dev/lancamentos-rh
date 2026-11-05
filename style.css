@@ -14,10 +14,26 @@
   --ambar: #8F4A0E;
   --ambar-fundo: #FBEBDD;
   --cinza-fundo: #E7EBE9;
+  --sobre-verde: #fff;          /* texto sobre fundo verde */
+  --calc-cab: #F4D9BF; --calc-cel: #FDF5EC;
+  --amarelo: #FFF1A8; --amarelo-borda: #C9A400; --verde-linha: #CDEBD9;
   --vermelho: #A32A2A;
   --raio: 6px;
   --fonte: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+
+/* Tema escuro: só troca as variáveis (ligado pelo botão do topo; a escolha fica salva no navegador) */
+html[data-tema="dark"] {
+  color-scheme: dark;
+  --fundo: #121917; --superficie: #1B2421; --tinta: #E4ECE8; --suave: #9AAAA3; --linha: #2F3C37;
+  --verde: #4FB88A; --verde-escuro: #3A9C73; --verde-fundo: #173D2E;
+  --ambar: #F0B27A; --ambar-fundo: #3B2A18; --cinza-fundo: #242F2B; --vermelho: #F07A7A;
+  --sobre-verde: #0B1A14;
+  --calc-cab: #4A3622; --calc-cel: #2A2219;
+  --amarelo: #4D4414; --verde-linha: #1E4A37;
+}
+/* Durante a troca, as cores mudam suavemente (a classe sai logo depois, para não pesar no uso normal) */
+html.trocando *, html.trocando *::before { transition: background-color .5s, color .5s, border-color .5s !important; }
 
 /* Base */
 *, *::before, *::after { box-sizing: border-box; }
@@ -39,21 +55,135 @@ input:disabled { background: var(--cinza-fundo); color: var(--suave); }
   border: 1px solid var(--linha); background: var(--superficie); color: var(--tinta);
 }
 .btn:hover { background: var(--cinza-fundo); }
-.btn--primario { background: var(--verde); border-color: var(--verde); color: #fff; }
+.btn--primario { background: var(--verde); border-color: var(--verde); color: var(--sobre-verde); }
 .btn--primario:hover { background: var(--verde-escuro); }
 :focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; } /* foco visível no teclado */
+
+/* Botão do tema: sol no claro, lua no escuro (um some girando enquanto o outro aparece) */
+.btn--tema { display: inline-flex; align-items: center; gap: 8px; }
+.astro { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.sol { color: #F2A900; fill: currentColor; }
+.lua { color: #C9D6FF; fill: currentColor; }
+.sol, .lua { transform-origin: 12px 12px; transition: transform .5s ease, opacity .5s ease; }
+.lua { transform: rotate(-90deg) scale(0); opacity: 0; }
+html[data-tema="dark"] .sol { transform: rotate(90deg) scale(0); opacity: 0; }
+html[data-tema="dark"] .lua { transform: none; opacity: 1; }
+.raios, .lua__balanco, .sol circle { transform-origin: 12px 12px; }
+.raios { animation: gira 14s linear infinite; }
+.sol circle { animation: pulsa 2.4s ease-in-out infinite alternate; }
+.lua__balanco { animation: balanca 3.2s ease-in-out infinite alternate; }
+.estrela { stroke: none; animation: brilha 1.6s ease-in-out infinite alternate; }
+.estrela--b { animation-delay: .8s; }
+@keyframes gira { to { transform: rotate(360deg); } }
+@keyframes pulsa { to { transform: scale(1.12); } }
+@keyframes balanca { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+@keyframes brilha { from { opacity: .2; } to { opacity: 1; } }
 
 /* Mensagens */
 .erro { margin: 0; color: var(--vermelho); font-size: 14px; }
 .aviso { margin: 0 0 12px; padding: 8px 12px; background: var(--ambar-fundo); color: var(--ambar); border-radius: var(--raio); }
 .dica { margin: 0; font-size: 13px; color: var(--suave); }
 
-/* Login */
-.login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
-.login__caixa {
-  width: 100%; max-width: 360px; display: grid; gap: 14px; padding: 28px;
-  background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio);
+/* Login: vidro translúcido + luz azul só na borda */
+/* Ângulo animado da luz: a caixa não gira, só o gradiente (inherits: true para o ::before enxergar o valor) */
+@property --angulo { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+
+.login {
+  position: relative; min-height: 100vh; display: grid; place-items: center; padding: 16px;
+  overflow: hidden; isolation: isolate; background-color: #0a1628; /* aparece enquanto a imagem não carrega */
 }
+.login__background-zoom {
+  position: absolute; inset: 0; z-index: -2; pointer-events: none;
+  background-color: #0a1628;
+  background-image: url('https://img.magnific.com/vetores-premium/conceito-de-comunidade-de-rede_41981-145.jpg?semt=ais_hybrid&w=740&q=80');
+  background-size: cover; background-position: center; filter: brightness(.55);
+  animation: zoomInvertido 20s infinite alternate ease-in-out;
+}
+@keyframes zoomInvertido { 0% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+/* Borda de luz: o feixe é recortado por máscara e só aparece no anel de 2px (nada de luz atrás do vidro) */
+.login__luz-borda {
+  position: relative; width: 100%; max-width: 380px; padding: 2px; border-radius: 18px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, .45), 0 0 32px rgba(0, 140, 255, .16);
+  animation: entrarCaixa .2s cubic-bezier(.2, .8, .2, 1) both, girarLuzBorda 4.2s linear infinite;
+}
+.login__luz-borda::before {
+  content: ""; position: absolute; inset: 0; padding: 2px; border-radius: inherit; pointer-events: none;
+  background: conic-gradient(from var(--angulo), transparent 0deg, transparent 250deg, rgba(0, 120, 255, .25) 290deg,
+    #008cff 322deg, #00d9ff 342deg, #fff 352deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;                      /* tudo menos o miolo => sobra só o anel */
+}
+@keyframes girarLuzBorda { to { --angulo: 360deg; } }
+@keyframes entrarCaixa { from { transform: translateY(24px) scale(.97); } to { transform: none; } }
+
+.login__caixa {
+  position: relative; z-index: 1; width: 100%; max-width: none; display: grid; gap: 14px; padding: 34px 32px 32px;
+  background: rgba(18, 38, 58, .42); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, .15); border-radius: 16px; box-shadow: inset 0 0 20px rgba(255, 255, 255, .035); color: #fff;
+}
+.login__logo {
+  width: 52px; height: 52px; margin: 0 auto 2px; display: grid; place-items: center; border-radius: 14px; color: #fff;
+  background: linear-gradient(135deg, rgba(0, 217, 255, .25), rgba(30, 143, 102, .35));
+  border: 1px solid rgba(255, 255, 255, .2); box-shadow: 0 8px 24px rgba(0, 140, 255, .25);
+}
+.login__logo svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.login__caixa h1 { margin: 0; color: #fff; text-align: center; font-size: 24px; text-shadow: 0 2px 6px rgba(0, 0, 0, .6); }
+.login__sub { margin: -6px 0 6px; text-align: center; font-size: 14px; color: rgba(255, 255, 255, .7); }
+.login__caixa label { color: rgba(255, 255, 255, .9); font-size: 13px; font-weight: 500; letter-spacing: .2px; text-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+
+.login__caixa input {
+  height: 46px; padding: 0 14px; font-size: 15px; color: #fff; background: rgba(0, 0, 0, .35);
+  border: 1px solid rgba(255, 255, 255, .3); border-radius: 10px; transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.login__caixa input:focus { background: rgba(0, 0, 0, .45); border-color: #00d2ff; outline: none; box-shadow: 0 0 0 3px rgba(0, 210, 255, .18); }
+/* O preenchimento automático do Chrome pinta o campo de branco: mantém o visual escuro */
+.login__caixa input:-webkit-autofill { -webkit-text-fill-color: #fff; caret-color: #fff; box-shadow: 0 0 0 100px #0e1d30 inset; transition: background-color 9999s; }
+.login__caixa .senha-caixa input { padding-right: 46px; }
+.login__caixa .olho { right: 6px; color: rgba(255, 255, 255, .7); }
+.login__caixa .olho:hover { color: #fff; background: rgba(255, 255, 255, .15); }
+.login__caixa .olho[aria-pressed="true"] { color: #00d9ff; }
+
+.login__caixa .erro { padding: 9px 12px; color: #ffb3b3; background: rgba(255, 90, 90, .12); border: 1px solid rgba(255, 120, 120, .4); border-radius: 8px; }
+.login__caixa .btn--primario {
+  height: 46px; margin-top: 4px; padding: 0; border: 0; border-radius: 10px; font-size: 15px; font-weight: 600; letter-spacing: .3px; color: #fff;
+  background: linear-gradient(135deg, #1e8f66, #12a39a); box-shadow: 0 8px 20px rgba(18, 163, 154, .28); transition: transform .15s, box-shadow .2s;
+}
+.login__caixa .btn--primario:hover { background: linear-gradient(135deg, #23a276, #14b3a8); transform: translateY(-1px); box-shadow: 0 12px 26px rgba(18, 163, 154, .38); }
+.login__caixa .btn--primario:active { transform: scale(.99); }
+
+/* Carregando: 8 bolinhas girando, cobrem o login até a tela principal ficar pronta */
+.login__carregando {
+  position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 18px; color: #fff;
+  background: rgba(5, 12, 24, .62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  animation: aparecer .25s ease .15s both;      /* só aparece após 150ms: login rápido não pisca a tela */
+}
+.login__carregando p { margin: 0; font-size: 14px; letter-spacing: .4px; color: rgba(255, 255, 255, .85); }
+.login__bolinhas { position: relative; width: 64px; height: 64px; animation: girarBolinhas 1.1s linear infinite; }
+.login__bolinhas span {                          /* brilho e tamanho crescem a cada bolinha (cauda de cometa) */
+  position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+  background: #00d9ff; box-shadow: 0 0 10px #00d9ff; opacity: calc(.15 + var(--i) * .12);
+  transform: rotate(calc(var(--i) * 45deg)) translateY(-26px) scale(calc(.4 + var(--i) * .085));
+}
+@keyframes girarBolinhas { to { transform: rotate(360deg); } }
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+
+/* Botão de mostrar senha: o olho abre e o risco some */
+.senha-caixa { position: relative; display: grid; }
+.senha-caixa input { padding-right: 40px; }
+.olho { position: absolute; right: 4px; top: 50%; translate: 0 -50%; width: 32px; height: 32px; display: grid; place-items: center;
+  padding: 0; border: 0; border-radius: var(--raio); background: none; color: var(--suave); cursor: pointer; }
+.olho:hover { color: var(--tinta); }
+.olho svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.olho__abertura { transform-origin: 12px 12px; transition: transform .25s ease; }
+.olho__pupila { transform-origin: 12px 12px; transition: transform .25s ease; }
+.olho__risco { stroke-dasharray: 23; stroke-dashoffset: 0; transition: stroke-dashoffset .25s ease; }
+.olho[aria-pressed="false"] .olho__abertura { transform: scaleY(.12); }   /* pálpebra fechada */
+.olho[aria-pressed="false"] .olho__pupila { transform: scale(0); }
+.olho[aria-pressed="true"] .olho__risco { stroke-dashoffset: 23; }        /* risco "se apaga" */
+.olho[aria-pressed="true"] { color: var(--verde); }
 
 /* Topo e abas */
 .topo {
@@ -76,7 +206,7 @@ input:disabled { background: var(--cinza-fundo); color: var(--suave); }
 .status--fechado { background: var(--cinza-fundo); color: var(--suave); }
 .status--aberto { background: var(--ambar-fundo); color: var(--ambar); }
 .status--concluido { background: var(--verde-fundo); color: var(--verde-escuro); }
-.status--encerrado { background: var(--tinta); color: #fff; }
+.status--encerrado { background: var(--tinta); color: var(--fundo); }
 .combo { display: flex; gap: 6px; }
 .combo select, .combo input { flex: 1; min-width: 0; }
 
@@ -88,15 +218,15 @@ th { font-size: 13px; font-weight: 600; color: var(--suave); background: var(--f
 tbody tr:last-child td { border-bottom: 0; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 td input[type="number"], td input[type="text"] { width: 110px; text-align: right; padding: 5px 8px; }
-th.calc { background: #F4D9BF; color: var(--ambar); }  /* colunas com conta, como o cabeçalho laranja da planilha */
-td[data-calc] { background: #FDF5EC; }
+th.calc { background: var(--calc-cab); color: var(--ambar); }  /* colunas com conta, como o cabeçalho laranja da planilha */
+td[data-calc] { background: var(--calc-cel); }
 /* Célula 103 - Nº h. extras destacada (o campo de dentro também precisa mudar, senão o fundo branco cobre o amarelo) */
-td.destaque-amarelo, td.destaque-amarelo input { background: #FFF1A8; }
-td.destaque-amarelo input { border-color: #C9A400; }
+td.destaque-amarelo, td.destaque-amarelo input { background: var(--amarelo); }
+td.destaque-amarelo input { border-color: var(--amarelo-borda); }
 .inativo { color: var(--suave); }
 
 /* Diálogo */
-dialog { border: 1px solid var(--linha); border-radius: var(--raio); padding: 0; width: min(420px, 92vw); }
+dialog { border: 1px solid var(--linha); border-radius: var(--raio); padding: 0; width: min(420px, 92vw); background: var(--superficie); color: var(--tinta); }
 dialog::backdrop { background: rgba(27, 42, 36, .45); }
 .dialogo { display: grid; gap: 12px; padding: 22px; }
 .dialogo__acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
@@ -112,8 +242,8 @@ body[data-papel="matriz"] .so-lancador { display: none; }
   border-radius: var(--raio); border: 1px solid var(--linha); background: var(--superficie); color: var(--tinta); }
 .linha-func span { font-size: 13px; color: var(--suave); }
 .linha-func em { font-size: 13px; font-style: normal; font-weight: 600; }
-.linha-func--aberta { background: #FFF1A8; border-color: #C9A400; }
-.linha-func--ok { background: #CDEBD9; border-color: var(--verde); }
+.linha-func--aberta { background: var(--amarelo); border-color: var(--amarelo-borda); }
+.linha-func--ok { background: var(--verde-linha); border-color: var(--verde); }
 .linha-func:disabled { cursor: not-allowed; opacity: .7; }
 .contagem { font-size: 14px; color: var(--suave); }
 .grade-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
@@ -121,8 +251,52 @@ dialog.larga { width: min(720px, 92vw); max-height: 90vh; overflow: auto; }
 
 /* Matriz: marca na célula da matrícula (verde = linha concluída, âmbar = em aberto) */
 .mat-ok { box-shadow: inset 4px 0 0 var(--verde); }
-.mat-aberta { box-shadow: inset 4px 0 0 #C9A400; }
+.mat-aberta { box-shadow: inset 4px 0 0 var(--amarelo-borda); }
 .so-leitor { position: absolute; left: -9999px; }
+
+/* Cena do modo escuro: o boneco vem da direita até o interruptor, vira a luz e vai embora */
+.cena { position: fixed; left: 0; right: 0; bottom: 0; height: 140px; overflow: hidden; pointer-events: none; z-index: 1000; }
+.interruptor { position: absolute; left: 20px; bottom: 34px; width: 34px; height: 56px; display: grid; place-items: center;
+  background: var(--superficie); border: 2px solid var(--linha); border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); }
+.interruptor__alavanca { width: 14px; height: 20px; border-radius: 3px; background: var(--suave); transform: translateY(9px); transition: transform .25s, background .25s; }
+.interruptor[data-ligado="true"] .interruptor__alavanca { transform: translateY(-9px); background: var(--verde); }
+.boneco { position: absolute; left: 0; bottom: 0; width: 44px; height: 88px; }
+.boneco svg { display: block; width: 100%; height: 100%; overflow: visible; transform-origin: 50% 100%; }
+.boneco__giro { width: 100%; height: 100%; transition: transform .18s ease-in-out; }   /* a meia-volta passa de lado, não vira de repente */
+.boneco.volta .boneco__giro { transform: scaleX(-1); }                     /* na volta ele olha para a direita */
+/* Articulações: cada peça gira em torno do seu ponto (quadril, joelho, ombro, cotovelo, cintura, pescoço) */
+.boneco :is(.perna, .joelho, .braco, .cotovelo, .tronco, .cabeca) { transform-box: view-box; }
+.perna-a { transform-origin: 20px 51px; }   .joelho-a { transform-origin: 20px 64px; }
+.perna-b { transform-origin: 22.5px 51px; } .joelho-b { transform-origin: 22.5px 64px; }
+.braco { transform-origin: 22px 26px; }     .cotovelo { transform-origin: 22px 37px; }
+.tronco { transform-origin: 22px 52px; }    .cabeca { transform-origin: 22px 20px; }
+.boneco :is(.perna, .joelho, .braco, .cotovelo, .tronco, .cabeca) { transform: rotate(0deg); }
+.olho { transform-box: fill-box; transform-origin: 50% 50%; animation: pisca 3.6s infinite; }
+/* Caminhada: um ciclo completo = dois passos. A perna de trás começa meio ciclo adiantada; o braço balança contra a perna */
+.boneco.anda { --ciclo: calc(var(--passo, .4s) * 2); }
+.boneco.anda :is(.perna, .joelho, .braco, .cotovelo, .tronco, .cabeca) { animation-duration: var(--ciclo); animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+.boneco.anda .perna    { animation-name: coxa; }
+.boneco.anda .joelho   { animation-name: joelho; }
+.boneco.anda .braco    { animation-name: bracada; }
+.boneco.anda .cotovelo { animation-name: cotovelada; }
+.boneco.anda .tronco   { animation-name: balanco; animation-duration: var(--passo, .4s); animation-direction: alternate; }
+.boneco.anda .cabeca   { animation-name: cabecada; animation-duration: var(--passo, .4s); animation-direction: alternate; }
+.boneco.anda :is(.perna-b, .joelho-b, .braco-a, .cotovelo-a) { animation-delay: calc(var(--passo, .4s) * -1); }
+.boneco.anda svg { animation: pulinho calc(var(--passo, .4s) / 2) ease-in-out infinite alternate; }   /* um pulinho por passo */
+.boneco.anda .boneco__sombra { animation: sombra calc(var(--passo, .4s) / 2) ease-in-out infinite alternate; }
+.boneco__sombra { position: absolute; left: 50%; bottom: 4px; width: 38px; height: 8px; margin-left: -19px; border-radius: 50%; background: rgba(0, 0, 0, .28); filter: blur(1px); }
+html[data-tema="dark"] .boneco__sombra { background: rgba(0, 0, 0, .65); }
+.boneco.pula svg { animation: pulo .42s ease-out; }                           /* saltinho de satisfação depois de virar a luz */
+@keyframes coxa { 0% { transform: rotate(-24deg); } 50% { transform: rotate(24deg); } 100% { transform: rotate(-24deg); } }
+@keyframes joelho { 0% { transform: rotate(-4deg); } 25% { transform: rotate(-58deg); } 50% { transform: rotate(-6deg); } 85% { transform: rotate(-12deg); } 100% { transform: rotate(-4deg); } }
+@keyframes bracada { 0% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } 100% { transform: rotate(20deg); } }
+@keyframes cotovelada { 0% { transform: rotate(34deg); } 50% { transform: rotate(8deg); } 100% { transform: rotate(34deg); } }
+@keyframes balanco { from { transform: rotate(-4.5deg); } to { transform: rotate(-1.5deg); } }
+@keyframes cabecada { from { transform: rotate(1.5deg); } to { transform: rotate(-2deg); } }
+@keyframes pulinho { to { transform: translateY(-3px); } }
+@keyframes sombra { to { transform: scaleX(.86); } }
+@keyframes pulo { 0% { transform: none; } 18% { transform: scale(1.06, .93); } 55% { transform: translateY(-13px) scale(.97, 1.04); } 100% { transform: none; } }
+@keyframes pisca { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
 
 /* Impressão: só a área montada pelo botão "Imprimir colunas" */
 .so-impressao { display: none; }

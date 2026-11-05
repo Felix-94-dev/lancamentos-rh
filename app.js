@@ -18,12 +18,26 @@ let calculosFixos = null;   // contas gravadas no encerramento { matrícula: con
 let funcionariosCache = []; // última lista carregada (para busca e edição)
 
 /* ---------- Login / sessão ---------- */
+/* Mostrar/ocultar senha no login (o reset do formulário volta a ocultar) */
+function verSenha(mostrar) {
+  const botao = $("#btn-ver-senha");
+  $("#login-senha").type = mostrar ? "text" : "password";
+  botao.setAttribute("aria-pressed", String(mostrar));
+  botao.setAttribute("aria-label", mostrar ? "Ocultar senha" : "Mostrar senha");
+}
+$("#btn-ver-senha").addEventListener("click", () => verSenha($("#login-senha").type === "password"));
+$("#form-login").addEventListener("reset", () => verSenha(false));
+
 $("#form-login").addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (!$("#login-carregando").hidden) return;            // já está entrando
+  $("#login-erro").hidden = true;
+  $("#login-carregando").hidden = false;
   try {
     usuario = await Dados.entrar($("#login-usuario").value.trim(), $("#login-senha").value);
-    iniciarApp();
+    await iniciarApp();
   } catch (err) {
+    $("#login-carregando").hidden = true;
     $("#login-erro").textContent = err.message;
     $("#login-erro").hidden = false;
   }
@@ -50,17 +64,22 @@ Dados.aoPerderSessao(() => {
 });
 
 async function iniciarApp() {
-  $("#tela-login").hidden = true;
-  $("#tela-app").hidden = false;
-  document.body.dataset.papel = usuario.papel; // o CSS usa isto para esconder itens da matriz
-  $("#usuario-info").textContent = usuario.nome;
+  $("#login-carregando").hidden = false;   // bolinhas até a tela principal estar pronta
+  try {
+    document.body.dataset.papel = usuario.papel; // o CSS usa isto para esconder itens da matriz
+    $("#usuario-info").textContent = usuario.nome;
 
-  // Competência padrão = mês atual (formato AAAA-MM)
-  $("#competencia").value = new Date().toISOString().slice(0, 7);
+    // Competência padrão = mês atual (formato AAAA-MM)
+    $("#competencia").value = new Date().toISOString().slice(0, 7);
 
-  await montarSeletoresUnidade();
+    await montarSeletoresUnidade();
+    await abrirAba(usuario.papel === "matriz" ? "funcionarios" : "lancamentos");
 
-  abrirAba(usuario.papel === "matriz" ? "funcionarios" : "lancamentos");
+    $("#tela-login").hidden = true;
+    $("#tela-app").hidden = false;
+  } finally {
+    $("#login-carregando").hidden = true;
+  }
   iniciarObservacao();
 }
 
@@ -91,9 +110,9 @@ function abrirAba(nome) {
   $("#aba-funcionarios").hidden = nome !== "funcionarios";
   $("#aba-lancamentos").hidden = nome !== "lancamentos";
   $("#aba-usuarios").hidden = nome !== "usuarios";
-  if (nome === "funcionarios") carregarFuncionarios();
-  else if (nome === "usuarios") carregarUsuarios();
-  else carregarLancamentos();
+  if (nome === "funcionarios") return carregarFuncionarios();
+  if (nome === "usuarios") return carregarUsuarios();
+  return carregarLancamentos();
 }
 
 /* ---------- Aba Usuários (matriz): logins e senhas ---------- */
@@ -618,3 +637,88 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) agen
 /* Ao abrir ou recarregar a página, retoma o login desta aba (não pede senha de novo) */
 const sessaoSalva = Dados.sessao();
 if (sessaoSalva) { usuario = sessaoSalva; iniciarApp(); }
+
+/* ---------- Modo escuro: o boneco vem da direita, vira o interruptor e vai embora ---------- */
+const raiz = document.documentElement;
+const dormindo = (ms) => new Promise((ok) => setTimeout(ok, ms));
+function aplicarTema(escuro) {
+  raiz.dataset.tema = escuro ? "dark" : "";
+  try { localStorage.setItem("tema", raiz.dataset.tema); } catch { /* sem armazenamento: vale só nesta sessão */ }
+  $("#rotulo-tema").textContent = escuro ? "Modo claro" : "Modo escuro";
+}
+
+async function cenaInterruptor(escurecer) {
+  const boneco = $("#boneco"), cena = $("#cena"), inter = $("#interruptor");
+  const PARADA = 42, FORA = innerWidth + 60;
+  const VELOCIDADE = 0.28;                           // px por ms: para ele andar mais devagar, diminua
+  const FREIO = { ms: 400, px: 56 };                 // ele desacelera ao chegar e acelera ao sair (px = v·t/2, sem tranco)
+  const ms = Math.min(5000, Math.max(2200, (FORA - PARADA - FREIO.px) / VELOCIDADE + FREIO.ms));
+  // a cadência dos passos acompanha a velocidade real (cerca de 70px por passo), para o pé não "escorregar"
+  boneco.style.setProperty("--passo", Math.min(450, Math.max(260, 70 / ((FORA - PARADA) / ms))) + "ms");
+  const t = FREIO.ms / ms;
+  const chegar = () => boneco.animate([
+    { transform: `translateX(${FORA}px)`, offset: 0, easing: "linear" },
+    { transform: `translateX(${PARADA + FREIO.px}px)`, offset: 1 - t, easing: "cubic-bezier(.5, 1, .89, 1)" },
+    { transform: `translateX(${PARADA}px)`, offset: 1 }], { duration: ms, fill: "forwards" }).finished;
+  const sair = () => boneco.animate([
+    { transform: `translateX(${PARADA}px)`, offset: 0, easing: "cubic-bezier(.11, 0, .5, 0)" },
+    { transform: `translateX(${PARADA + FREIO.px}px)`, offset: t, easing: "linear" },
+    { transform: `translateX(${FORA}px)`, offset: 1 }], { duration: ms, fill: "forwards" }).finished;
+
+  // Poses: congela a caminhada onde ela estiver e leva cada articulação até o ângulo pedido (sem estalo)
+  const partes = [...boneco.querySelectorAll(".perna, .joelho, .braco, .cotovelo, .tronco, .cabeca")];
+  const congelar = () => {
+    const atuais = partes.map((el) => getComputedStyle(el).transform);
+    partes.forEach((el, i) => { el.style.animation = "none"; el.style.transform = atuais[i]; });
+    void boneco.offsetWidth;
+  };
+  const soltar = () => partes.forEach((el) => { el.style.animation = ""; el.style.transform = ""; el.style.transition = ""; });
+  const pose = (angulos, dur) => {
+    for (const [classe, graus] of Object.entries(angulos)) {
+      const el = boneco.querySelector("." + classe);
+      el.style.transition = `transform ${dur}ms ease-in-out`;
+      el.style.transform = `rotate(${graus}deg)`;
+    }
+  };
+  const PARADO = { "perna-a": 5, "perna-b": -6, "joelho-a": -3, "joelho-b": -3, "braco-a": 0, "braco-b": 0, "cotovelo-a": 8, "cotovelo-b": 8, tronco: 0, cabeca: 0 };
+
+  inter.dataset.ligado = String(escurecer);          // quem vai apagar encontra a luz acesa (e vice-versa)
+  boneco.className = "boneco anda";
+  cena.hidden = false;
+  await chegar();                                    // da direita para a esquerda, freando no fim
+  congelar();
+  boneco.className = "boneco";
+  pose({ ...PARADO, "braco-a": 82, "cotovelo-a": 14, "braco-b": 10, "cotovelo-b": 20, tronco: -6, cabeca: -4 }, 320);   // inclina e estende o braço
+  await dormindo(420);
+  pose({ "braco-a": 90, "cotovelo-a": 2, tronco: -8 }, 110);                      // empurra a alavanca
+  await dormindo(90);
+  inter.dataset.ligado = String(!escurecer);         // vira o interruptor
+  raiz.classList.add("trocando");
+  aplicarTema(escurecer);
+  await dormindo(160);
+  boneco.className = "boneco pula";                  // saltinho de satisfação, braço solto
+  pose({ ...PARADO, "cotovelo-a": 22, "braco-b": -8, cabeca: 3 }, 300);
+  await dormindo(340);
+  raiz.classList.remove("trocando");
+  boneco.className = "boneco volta";                 // vira de lado; no meio da meia-volta (quase sem largura) retoma a caminhada
+  await dormindo(90);
+  soltar();
+  boneco.className = "boneco anda volta";
+  await sair();                                      // vai embora, acelerando
+  boneco.getAnimations().forEach((x) => x.cancel());
+  soltar();
+  boneco.className = "boneco";
+  cena.hidden = true;
+}
+
+let trocandoTema = false;
+$("#btn-tema").addEventListener("click", async () => {
+  if (trocandoTema) return;
+  trocandoTema = true;
+  const escurecer = raiz.dataset.tema !== "dark";
+  try {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) aplicarTema(escurecer);  // sem animação para quem pediu
+    else await cenaInterruptor(escurecer);
+  } finally { trocandoTema = false; }
+});
+$("#rotulo-tema").textContent = raiz.dataset.tema === "dark" ? "Modo escuro" : "Modo claro";
