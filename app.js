@@ -6,19 +6,18 @@
 
 /* ---------- Utilidades ---------- */
 const $ = (sel) => document.querySelector(sel);
-/* Escapa texto antes de pôr em HTML (evita injeção de código) */
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const moeda = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const NOMES_STATUS = { fechado: "Fechado", aberto: "Aberto para lançamento", concluido: "Concluído", encerrado: "Encerrado pela matriz" };
-const IMPRIME = ["concluido", "encerrado"]; // status em que a matriz pode imprimir (todas as linhas concluídas)
+const IMPRIME = ["concluido", "encerrado"]; 
 
 let usuario = null;      // usuário logado
 let calculosFixos = null;   // contas gravadas no encerramento { matrícula: contas }; null = calcula na hora
 let funcionariosCache = []; // última lista carregada (para busca e edição)
 
 /* ---------- Login / sessão ---------- */
-/* Mostrar/ocultar senha no login (o reset do formulário volta a ocultar) */
+
 function verSenha(mostrar) {
   const botao = $("#btn-ver-senha");
   $("#login-senha").type = mostrar ? "text" : "password";
@@ -30,7 +29,7 @@ $("#form-login").addEventListener("reset", () => verSenha(false));
 
 $("#form-login").addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (!$("#login-carregando").hidden) return;            // já está entrando
+  if (!$("#login-carregando").hidden) return;            
   $("#login-erro").hidden = true;
   $("#login-carregando").hidden = false;
   try {
@@ -64,9 +63,9 @@ Dados.aoPerderSessao(() => {
 });
 
 async function iniciarApp() {
-  $("#login-carregando").hidden = false;   // bolinhas até a tela principal estar pronta
+  $("#login-carregando").hidden = false;  
   try {
-    document.body.dataset.papel = usuario.papel; // o CSS usa isto para esconder itens da matriz
+    document.body.dataset.papel = usuario.papel; /
     $("#usuario-info").textContent = usuario.nome;
 
     // Competência padrão = mês atual (formato AAAA-MM)
@@ -184,7 +183,7 @@ $("#form-usuario").addEventListener("submit", async (e) => {
     usuario = Dados.sessao() || usuario;          // se alterou o próprio cadastro, atualiza o nome no topo
     $("#usuario-info").textContent = usuario.nome;
     $("#dlg-usuario").close();
-    await montarSeletoresUnidade(); // login de lançador pode ter criado uma unidade nova
+    await montarSeletoresUnidade(); 
     carregarUsuarios();
   } catch (err) {
     $("#usu-erro").textContent = err.message;
@@ -258,14 +257,14 @@ $("#btn-nova-unidade").addEventListener("click", () => modoUnidadeNova($("#f-uni
 function unidadeDoFormulario() {
   if ($("#f-unidade-nova").hidden) return $("#f-unidade").value.trim();
   const nome = $("#f-unidade-nova").value.trim().replace(/\s+/g, " ");
-  // Se já existir (sem diferenciar maiúscula), usa a existente em vez de criar duplicada
+ 
   return Dados.unidades().find((u) => u.toLowerCase() === nome.toLowerCase()) ?? nome;
 }
 $("#btn-novo-func").addEventListener("click", () => abrirDialogo(null));
 $("#btn-cancelar").addEventListener("click", () => $("#dlg-func").close());
 
 $("#form-func").addEventListener("submit", async (e) => {
-  e.preventDefault(); // mantém o diálogo aberto até o salvamento dar certo
+  e.preventDefault(); 
   const codigo = $("#f-codigo").value.trim();
   const existe = funcionariosCache.some((f) => f.codigo === codigo);
   if (existe && !$("#f-codigo").readOnly) {
@@ -307,7 +306,7 @@ const colunaPorId = (id) => [
 /* Formata conforme a unidade da coluna */
 const fmt = (n, un) => un === "R$" ? moeda(n) : Number(n).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
 
-/* Lê os campos de uma linha como { coluna: valor } (vazio fica "": importa para o 119 manual) */
+
 function lerLinha(tr) {
   const v = {};
   tr.querySelectorAll("input[data-tipo]").forEach((i) => (v[i.dataset.tipo] = i.value));
@@ -333,7 +332,7 @@ function preencherCalculos(tr) {
   }
 }
 
-let ctxSat = null;                // dados da tela do lançador (usados pelo formulário)
+let ctxSat = null;                // dados da tela do lançador 
 let codigoAberto = null;          // matrícula do formulário aberto
 let fila = Promise.resolve();     // grava os campos do formulário em ordem
 const falhas = new Set();         // campos que não foram gravados (bloqueiam o Concluído)
@@ -379,7 +378,7 @@ async function carregarLancamentos() {
     // Lançador: lista de funcionários + formulário
     if (!matriz) { ctxSat = { comp, uni, status, valores, linhas, lista }; desenharListaSatelite(); return; }
 
-    // Matriz: 31 colunas na ordem exata da planilha (entradas e contas intercaladas)
+    
     const cols = LAYOUT_MATRIZ.map(colunaPorId);
     const th = (t, c = "", id = "", un = "") => `<th class="${c}" data-col="${id}" data-un="${un}">${esc(t)}</th>`;
     $("#cab-lanc").innerHTML = "<tr>" + th("Matrícula", "", "matricula") + th("Nome", "", "nome") +
@@ -423,7 +422,7 @@ $("#lista-satelite").addEventListener("click", (e) => {
 function abrirFormulario(cod) {
   const { status, valores, linhas, lista } = ctxSat;
   const f = lista.find((x) => x.codigo === cod), ok = linhas[cod] === "concluido", v = valores[cod] || {};
-  const travado = status === "encerrado"; // só a matriz encerrando trava; linha concluída continua editável
+  const travado = status === "encerrado"; 
   codigoAberto = cod; falhas.clear();
   $("#lanc-titulo").textContent = f.nome;
   $("#lanc-sub").textContent = `Matrícula ${f.codigo} - ${f.funcao} - ` +
@@ -493,7 +492,7 @@ $("#form-imprimir").addEventListener("submit", async (e) => {
 function temDadoNasColunas(tr, ids) {
   const v = lerLinha(tr), r = contasDa(tr);
   return ids.some((id) => {
-    if (id in r) return Math.abs(r[id]) >= 0.005;             // conta (menos de 1 centavo = zero)
+    if (id in r) return Math.abs(r[id]) >= 0.005;             
     const bruto = String(v[id] ?? "").trim();
     if (bruto === "") return false;
     return colunaPorId(id).un === "t" ? true : Number(bruto) !== 0;
@@ -507,7 +506,7 @@ function imprimirColunas(ids, comp, uni, linhas, totalFuncionarios) {
     if (t.dataset.col === "matricula") return tr.dataset.cod;
     const td = tr.querySelector(`td[data-col="${t.dataset.col}"]`), i = td.querySelector("input");
     if (!i) return td.textContent.trim();
-    if (i.value === "") return i.placeholder || ""; // 119 vazio: imprime o valor sugerido que está em uso
+    if (i.value === "") return i.placeholder || ""; 
     return i.type === "text" ? i.value : fmt(i.value, td.dataset.un);
   };
   const resumo = linhas.length === totalFuncionarios ? `${linhas.length} funcionários`
@@ -540,8 +539,7 @@ $("#btn-contraprova").addEventListener("click", async () => {
   } catch (err) { mostrarMsg(err.message); }
 });
 
-/* Botões disponíveis em cada status (quem pode o quê é conferido de novo em dados.js).
-   A conclusão agora é por linha (formulário do lançador); a filial fica "concluída" quando todas as linhas estão. */
+/* Botões disponíveis em cada status (quem pode o quê é conferido de novo em dados.js). */
 function desenharAcoes(status, comp, uni) {
   const matriz = usuario.papel === "matriz";
   const acoes = {
@@ -650,7 +648,7 @@ function aplicarTema(escuro) {
 async function cenaInterruptor(escurecer) {
   const boneco = $("#boneco"), cena = $("#cena"), inter = $("#interruptor");
   const PARADA = 42, FORA = innerWidth + 60;
-  const VELOCIDADE = 0.28;                           // px por ms: para ele andar mais devagar, diminua
+  const VELOCIDADE = 0.20;                           // px por ms: para ele andar mais devagar, diminua
   const FREIO = { ms: 400, px: 56 };                 // ele desacelera ao chegar e acelera ao sair (px = v·t/2, sem tranco)
   const ms = Math.min(5000, Math.max(2200, (FORA - PARADA - FREIO.px) / VELOCIDADE + FREIO.ms));
   // a cadência dos passos acompanha a velocidade real (cerca de 70px por passo), para o pé não "escorregar"
@@ -682,10 +680,10 @@ async function cenaInterruptor(escurecer) {
   };
   const PARADO = { "perna-a": 5, "perna-b": -6, "joelho-a": -3, "joelho-b": -3, "braco-a": 0, "braco-b": 0, "cotovelo-a": 8, "cotovelo-b": 8, tronco: 0, cabeca: 0 };
 
-  inter.dataset.ligado = String(escurecer);          // quem vai apagar encontra a luz acesa (e vice-versa)
+  inter.dataset.ligado = String(escurecer);          
   boneco.className = "boneco anda";
   cena.hidden = false;
-  await chegar();                                    // da direita para a esquerda, freando no fim
+  await chegar();                                    
   congelar();
   boneco.className = "boneco";
   pose({ ...PARADO, "braco-a": 82, "cotovelo-a": 14, "braco-b": 10, "cotovelo-b": 20, tronco: -6, cabeca: -4 }, 320);   // inclina e estende o braço
@@ -717,7 +715,7 @@ $("#btn-tema").addEventListener("click", async () => {
   trocandoTema = true;
   const escurecer = raiz.dataset.tema !== "dark";
   try {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) aplicarTema(escurecer);  // sem animação para quem pediu
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) aplicarTema(escurecer);  
     else await cenaInterruptor(escurecer);
   } finally { trocandoTema = false; }
 });
