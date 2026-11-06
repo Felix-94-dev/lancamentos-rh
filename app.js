@@ -12,6 +12,20 @@ const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) =>
 const moeda = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const NOMES_STATUS = { fechado: "Fechado", aberto: "Aberto para lançamento", concluido: "Concluído", encerrado: "Encerrado pela matriz" };
 const IMPRIME = ["concluido", "encerrado"]; // status em que a matriz pode imprimir (todas as linhas concluídas)
+/* "Imprimir lote": cada item é uma impressão (começa em página nova); as colunas do mesmo item saem juntas.
+   Use os ids das colunas (ver COLUNAS e CONTAS em dados.js). */
+const LOTE = [
+  ["atrasos442"],            // 442 - Horas de atrasos
+  ["feriado012"],            // 012 - Valor feriado
+  ["premio110"],             // 110 - Prêmio h. extra acima de 60
+  ["dobras114"],             // 114 - Valor das dobras
+  ["nHE103"],                // 103 - Nº h. extras
+  ["premioGranja"],          // 109 - Prêmio só da granja
+  ["heAte60"],               // 103 - H. extra até 60 hs
+  ["faltas409"],             // 409 - Faltas dia
+  ["nice"],                  // Controle Nice
+  ["prod117", "dsr119"],     // 117 - Prod + 119 - DSR prod (juntas, na mesma página)
+];
 
 let usuario = null;      // usuário logado
 let calculosFixos = null;   // contas gravadas no encerramento { matrícula: contas }; null = calcula na hora
@@ -364,8 +378,10 @@ async function carregarLancamentos() {
     $("#contagem").textContent = status === "fechado" ? "" : `${concluidas} de ${lista.length} linhas concluídas`;
     desenharAcoes(status, comp, uni);
     // Imprimir: só a matriz, e só quando a filial concluiu todas as linhas
-    $("#btn-imprimir").disabled = !IMPRIME.includes(status);
-    $("#btn-imprimir").title = IMPRIME.includes(status) ? "" : "Disponível quando a filial concluir todas as linhas";
+    for (const b of document.querySelectorAll("#btn-imprimir, #btn-imprimir-lote")) {
+      b.disabled = !IMPRIME.includes(status);
+      b.title = IMPRIME.includes(status) ? "" : "Disponível quando a filial concluir todas as linhas";
+    }
     $("#btn-contraprova").disabled = status === "fechado";
     $("#caixa-tabela").hidden = !matriz;
     $("#lista-satelite").hidden = matriz;
@@ -500,8 +516,8 @@ function temDadoNasColunas(tr, ids) {
   });
 }
 
-/* Monta uma tabela só com as colunas marcadas (na ordem da matriz) e as linhas escolhidas, e chama a impressão */
-function imprimirColunas(ids, comp, uni, linhas, totalFuncionarios) {
+/* Monta (em HTML) uma tabela só com as colunas dadas (na ordem da matriz) e as linhas escolhidas */
+function tabelaColunas(ids, comp, uni, linhas, totalFuncionarios) {
   const ths = [...document.querySelectorAll("#cab-lanc th")].filter((t) => ["matricula", "nome", ...ids].includes(t.dataset.col));
   const valorDe = (tr, t) => {
     if (t.dataset.col === "matricula") return tr.dataset.cod;
@@ -511,13 +527,39 @@ function imprimirColunas(ids, comp, uni, linhas, totalFuncionarios) {
     return i.type === "text" ? i.value : fmt(i.value, td.dataset.un);
   };
   const resumo = linhas.length === totalFuncionarios ? `${linhas.length} funcionários`
-    : `${linhas.length} de ${totalFuncionarios} funcionários (só os que têm dados nas colunas)`;
-  $("#area-impressao").innerHTML = `<h1>Lançamentos de pessoal</h1>
-    <p>Filial: ${esc(uni)} - Competência: ${esc(comp.split("-").reverse().join("/"))} - ${esc(resumo)} - Emitido em ${esc(new Date().toLocaleString("pt-BR"))} por ${esc(usuario.nome)}</p>
-    <table><thead><tr>${ths.map((t) => `<th class="${t.classList.contains("num") ? "num" : ""}">${esc(t.textContent.trim())}</th>`).join("")}</tr></thead>
-    <tbody>${linhas.map((tr) => "<tr>" + ths.map((t) => `<td class="${t.classList.contains("num") ? "num" : ""}">${esc(valorDe(tr, t))}</td>`).join("") + "</tr>").join("")}</tbody></table>`;
+    : `${linhas.length} de ${totalFuncionarios} funcionários (só os que têm dados)`;
+  const rotulos = ths.filter((t) => ids.includes(t.dataset.col)).map((t) => t.textContent.trim());
+  const titulo = rotulos.length <= 2 ? rotulos.join("  +  ") : "Colunas selecionadas";
+  const cel = (t, tag, conteudo) => `<${tag} class="${t.classList.contains("num") ? "num" : ""}">${esc(conteudo)}</${tag}>`;
+  return `<section><table class="${ids.length <= 2 ? "estreita" : ids.length > 6 ? "compacta" : ""}"><thead>
+    <tr class="doc-cab"><th colspan="${ths.length}">
+      <div class="doc-sup">Lançamentos de pessoal</div>
+      <div class="doc-titulo">${esc(titulo)}</div>
+      <div class="doc-meta"><span>Filial <b>${esc(uni)}</b></span><span>Competência <b>${esc(comp.split("-").reverse().join("/"))}</b></span><span>${esc(resumo)}</span><span>Emitido em ${esc(new Date().toLocaleString("pt-BR"))} por ${esc(usuario.nome)}</span></div>
+    </th></tr>
+    <tr>${ths.map((t) => cel(t, "th", t.textContent.trim())).join("")}</tr></thead>
+    <tbody>${linhas.map((tr) => "<tr>" + ths.map((t) => cel(t, "td", valorDe(tr, t))).join("") + "</tr>").join("")}</tbody></table></section>`;
+}
+function imprimirColunas(ids, comp, uni, linhas, totalFuncionarios) {
+  $("#area-impressao").innerHTML = tabelaColunas(ids, comp, uni, linhas, totalFuncionarios);
   window.print();
 }
+
+/* Lote: uma única impressão com um bloco por item de LOTE, cada um em página nova.
+   Só entram os funcionários que têm dado nas colunas do bloco; blocos sem nenhum dado são pulados. */
+$("#btn-imprimir-lote").addEventListener("click", async () => {
+  const comp = $("#competencia").value, uni = $("#unidade").value;
+  try {
+    if (!IMPRIME.includes(await Dados.statusPeriodo(comp, uni))) throw new Error("A filial ainda não concluiu todas as linhas.");
+    const todas = [...document.querySelectorAll("#corpo-lanc tr[data-cod]")];
+    const blocos = LOTE.map((ids) => [ids, todas.filter((tr) => temDadoNasColunas(tr, ids))])
+      .filter(([, linhas]) => linhas.length)
+      .map(([ids, linhas]) => tabelaColunas(ids, comp, uni, linhas, todas.length));
+    if (!blocos.length) throw new Error("Nenhum funcionário tem dados nas colunas do lote.");
+    $("#area-impressao").innerHTML = blocos.join("");
+    window.print();
+  } catch (err) { mostrarMsg(err.message); }
+});
 
 /* ---------- Satélite: contraprova (cópia do lançamento) ----------
    Imprime (ou salva em PDF) TODOS os funcionários ativos da unidade e TODAS as colunas lançadas,

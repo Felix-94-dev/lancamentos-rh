@@ -298,21 +298,34 @@ html[data-tema="dark"] .boneco__sombra { background: rgba(0, 0, 0, .65); }
 @keyframes pulo { 0% { transform: none; } 18% { transform: scale(1.06, .93); } 55% { transform: translateY(-13px) scale(.97, 1.04); } 100% { transform: none; } }
 @keyframes pisca { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
 
-/* Impressão: só a área montada pelo botão "Imprimir colunas" */
+/* Impressão: só a área montada pelos botões de imprimir (colunas, lote e contraprova) */
 .so-impressao { display: none; }
 @media print {
-  @page { size: A4 landscape; margin: 10mm; }
+  @page { size: A4 landscape; margin: 12mm 12mm 15mm;
+    @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 8pt sans-serif; color: #666; } } /* numeração: só em navegadores que suportam */
   body { background: #fff; }
   body > *:not(#area-impressao) { display: none !important; }
-  #area-impressao { display: block; color: #000; }
-  #area-impressao h1 { font-size: 14pt; margin: 0 0 4px; }
-  #area-impressao p { margin: 0 0 8px; font-size: 9pt; }
-  #area-impressao table { width: 100%; font-size: 8.5pt; }
-  #area-impressao th, #area-impressao td { border: 1px solid #000; padding: 3px 5px; white-space: normal; }
-  #area-impressao th { background: #eee; color: #000; }
-  #area-impressao thead { display: table-header-group; } /* repete o cabeçalho em cada página */
-  #area-impressao tr { break-inside: avoid; }             /* não corta uma linha ao meio entre páginas */
+  #area-impressao { display: block; color: #111; font-family: var(--fonte); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  #area-impressao h1 { font-size: 16pt; margin: 0 0 4px; padding-left: 10px; border-left: 5px solid #1E6B4E; color: #14503A; }
+  #area-impressao p { margin: 0 0 10px; font-size: 9pt; color: #333; }
+  #area-impressao table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  #area-impressao table.estreita { width: 88%; }                        /* poucas colunas: não esticar até a borda da folha */
+  #area-impressao table.compacta { font-size: 7pt; }                    /* muitas colunas: letra e espaços menores para caber na folha */
+  #area-impressao th, #area-impressao td { padding: 3.5px 8px; text-align: left; white-space: normal; }
+  #area-impressao thead { display: table-header-group; }                /* repete o cabeçalho em cada página */
+  #area-impressao tr { break-inside: avoid; }                           /* não corta uma linha ao meio entre páginas */
+  #area-impressao thead tr:last-child th { background: #E8F1EC; color: #14503A; font-size: 8.5pt; border-top: 1px solid #14503A; border-bottom: 1.5px solid #14503A; }
+  #area-impressao tbody td { border-bottom: .5pt solid #C9D3CE; font-variant-numeric: tabular-nums; }
+  #area-impressao tbody tr:nth-child(even) td { background: #F5F8F6; }
+  #area-impressao table.compacta th, #area-impressao table.compacta td { padding: 3px 2px; }
+  #area-impressao table.compacta thead tr:last-child th { font-size: 7pt; }
   #area-impressao .num { text-align: right; }
+  #area-impressao .doc-cab th { padding: 0 0 12px; background: none; border: 0; font-weight: 400; }
+  #area-impressao .doc-sup { font-size: 8pt; letter-spacing: .12em; text-transform: uppercase; color: #5C6B64; }
+  #area-impressao .doc-titulo { margin: 3px 0 7px; padding-left: 10px; border-left: 5px solid #1E6B4E; font-size: 20pt; font-weight: 700; line-height: 1.15; color: #14503A; }
+  #area-impressao .doc-meta { font-size: 9pt; color: #333; }
+  #area-impressao .doc-meta span + span::before { content: "·"; margin: 0 8px; color: #888; }
+  #area-impressao section + section { break-before: page; }           /* cada bloco do lote começa em página nova */
 }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
