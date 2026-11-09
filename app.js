@@ -421,7 +421,9 @@ async function carregarLancamentos() {
 
 /* ---------- Satélite: lista de funcionários e formulário ---------- */
 function desenharListaSatelite() {
-  const { status, linhas, lista } = ctxSat;
+  const { status, linhas } = ctxSat;
+  const termo = $("#busca-lanc").value.trim().toLowerCase();
+  const lista = ctxSat.lista.filter((f) => f.nome.toLowerCase().includes(termo) || f.codigo.toLowerCase().includes(termo));
   $("#lista-satelite").innerHTML = lista.length ? lista.map((f) => {
     const ok = linhas[f.codigo] === "concluido";
     const cls = status === "fechado" ? "" : ok ? "linha-func--ok" : "linha-func--aberta";
@@ -429,8 +431,9 @@ function desenharListaSatelite() {
       : ok ? "Concluído (pode alterar)" : "Em aberto";
     return `<button type="button" class="linha-func ${cls}" data-abrir="${esc(f.codigo)}" ${status === "fechado" ? "disabled" : ""}>
       <strong>${esc(f.nome)}</strong><span>Matrícula ${esc(f.codigo)} - ${esc(f.funcao)}</span><em>${texto}</em></button>`;
-  }).join("") : "<p>Nenhum funcionário ativo nesta unidade.</p>";
+  }).join("") : "<p>Nenhum funcionário encontrado.</p>";
 }
+$("#busca-lanc").addEventListener("input", desenharListaSatelite);
 $("#lista-satelite").addEventListener("click", (e) => {
   const b = e.target.closest("[data-abrir]");
   if (b) abrirFormulario(b.dataset.abrir);
@@ -586,16 +589,14 @@ $("#btn-contraprova").addEventListener("click", async () => {
    A conclusão agora é por linha (formulário do lançador); a filial fica "concluída" quando todas as linhas estão. */
 function desenharAcoes(status, comp, uni) {
   const matriz = usuario.papel === "matriz";
+  const encerrar = ["Encerrar filial", async () => {
+    if (!confirm("Encerrar esta filial? A unidade não poderá mais alterar nenhum dado (você pode reabrir depois).")) return;
+    await Dados.encerrarFilial(comp, uni);
+  }, true];
   const acoes = {
     fechado:   matriz ? [["Liberar para lançamento", () => Dados.liberar(comp, uni), true]] : [],
-    aberto:    [],
-    concluido: matriz ? [
-      ["Encerrar filial", async () => {
-        if (!confirm("Encerrar esta filial? A unidade não poderá mais alterar nenhum dado (você pode reabrir depois).")) return;
-        await Dados.encerrarFilial(comp, uni);
-      }, true],
-      ["Reabrir filial", () => Dados.reabrirFilial(comp, uni), false],
-    ] : [],
+    aberto:    matriz ? [encerrar] : [],
+    concluido: matriz ? [encerrar, ["Reabrir filial", () => Dados.reabrirFilial(comp, uni), false]] : [],
     encerrado: matriz ? [["Reabrir filial", () => Dados.reabrirFilial(comp, uni), false]] : [],
   }[status];
 

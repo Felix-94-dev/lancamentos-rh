@@ -341,8 +341,7 @@ const Dados = (() => {
   async function encerrarFilial(comp, uni) {
     exigirLogin();
     if (!souMatriz()) throw new Error("Só a matriz encerra a filial.");
-    const statusAtual = await statusPeriodo(comp, uni);
-    if (statusAtual !== "concluido") throw new Error("Só dá para encerrar quando todas as linhas estiverem concluídas.");
+    if ((await liberacao(comp, uni)) !== "aberto") throw new Error("Só dá para encerrar uma filial aberta para lançamento.");
 
     // Foto do mês: nome, função, salário, lançamentos e contas como estão agora. O histórico lê daqui.
     const [funcs, vals] = await Promise.all([funcionarios(), lancamentos(comp, uni)]);

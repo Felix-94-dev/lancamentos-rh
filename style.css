@@ -214,6 +214,8 @@ html[data-tema="dark"] .lua { transform: none; opacity: 1; }
 .tabela-rolagem { overflow-x: auto; background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+#caixa-tabela { max-height: calc(100vh - 230px); overflow: auto; }  /* barra de rolagem horizontal sempre visível, sem ir ao fim da página */
+#caixa-tabela th { position: sticky; top: 0; z-index: 1; }
 th { font-size: 13px; font-weight: 600; color: var(--suave); background: var(--fundo); }
 tbody tr:last-child td { border-bottom: 0; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
