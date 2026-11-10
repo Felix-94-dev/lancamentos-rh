@@ -57,6 +57,7 @@
         <button class="aba so-matriz" data-aba="funcionarios">Funcionários</button>
         <button class="aba" data-aba="lancamentos">Lançamentos</button>
         <button class="aba so-matriz" data-aba="usuarios">Usuários</button>
+        <button class="aba so-master" data-aba="log">Log</button>
       </nav>
       <button id="btn-atualizar" class="btn" title="Recarregar os dados da tela atual">Atualizar</button>
       <button id="btn-tema" class="btn btn--tema" title="Alternar entre tema claro e escuro">
@@ -127,6 +128,20 @@
               <tr><th>Login</th><th>Nome</th><th>Perfil</th><th>Unidade</th><th>Situação</th><th></th></tr>
             </thead>
             <tbody id="corpo-usuarios"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Aba: log de atividades (só a matriz) -->
+      <section id="aba-log" hidden>
+        <div class="barra">
+          <input id="busca-log" type="search" placeholder="Filtrar por usuário, ação, tabela ou detalhe">
+        </div>
+        <p id="msg-log" class="aviso" role="status" hidden></p>
+        <div class="tabela-rolagem">
+          <table>
+            <thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Tabela</th><th>Detalhe</th></tr></thead>
+            <tbody id="corpo-log"></tbody>
           </table>
         </div>
       </section>

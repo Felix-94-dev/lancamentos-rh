@@ -81,6 +81,7 @@ async function iniciarApp() {
   $("#login-carregando").hidden = false;   // bolinhas até a tela principal estar pronta
   try {
     document.body.dataset.papel = usuario.papel; // o CSS usa isto para esconder itens da matriz
+    document.body.dataset.master = usuario.master ? "1" : ""; // e isto para esconder o que é só do master
     $("#usuario-info").textContent = usuario.nome;
 
     // Competência padrão = mês atual (formato AAAA-MM)
@@ -124,10 +125,34 @@ function abrirAba(nome) {
   $("#aba-funcionarios").hidden = nome !== "funcionarios";
   $("#aba-lancamentos").hidden = nome !== "lancamentos";
   $("#aba-usuarios").hidden = nome !== "usuarios";
+  $("#aba-log").hidden = nome !== "log";
   if (nome === "funcionarios") return carregarFuncionarios();
   if (nome === "usuarios") return carregarUsuarios();
+  if (nome === "log") return carregarLog();
   return carregarLancamentos();
 }
+
+/* ---------- Aba Log (matriz): quem fez o quê ---------- */
+let logCache = [];
+async function carregarLog() {
+  try {
+    logCache = await Dados.log();
+    $("#msg-log").hidden = true;
+    desenharLog();
+  } catch (err) { $("#msg-log").textContent = err.message; $("#msg-log").hidden = false; }
+}
+function desenharLog() {
+  const termo = $("#busca-log").value.trim().toLowerCase();
+  const lista = logCache.filter((l) =>
+    `${l.usuario} ${l.acao} ${l.tabela} ${JSON.stringify(l.detalhe)}`.toLowerCase().includes(termo));
+  $("#corpo-log").innerHTML = lista.length ? lista.map((l) => `
+    <tr>
+      <td>${new Date(l.quando).toLocaleString("pt-BR")}</td><td>${esc(l.usuario)}</td>
+      <td>${esc(l.acao)}</td><td>${esc(l.tabela || "—")}</td>
+      <td>${esc(l.detalhe ? JSON.stringify(l.detalhe) : "")}</td>
+    </tr>`).join("") : `<tr><td colspan="5">Nenhum registro.</td></tr>`;
+}
+$("#busca-log").addEventListener("input", desenharLog);
 
 /* ---------- Aba Usuários (matriz): logins e senhas ---------- */
 let usuariosCache = [];
@@ -629,6 +654,7 @@ function atualizarTela() {
   if (!usuario) return;
   if (abaAtual === "funcionarios") carregarFuncionarios();
   else if (abaAtual === "usuarios") carregarUsuarios();
+  else if (abaAtual === "log") carregarLog();
   else carregarLancamentos();
 }
 $("#btn-atualizar").addEventListener("click", atualizarTela);

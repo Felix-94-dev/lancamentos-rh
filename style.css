@@ -236,6 +236,7 @@ dialog::backdrop { background: rgba(27, 42, 36, .45); }
 
 /* Perfil lançador: esconde itens exclusivos da matriz (só visual; a trava real é no banco) */
 body[data-papel="lancador"] .so-matriz { display: none; }
+body:not([data-master="1"]) .so-master { display: none; }
 body[data-papel="matriz"] .so-lancador { display: none; }
 
 /* Satélite: lista de funcionários (amarelo = em aberto, verde = concluído) */

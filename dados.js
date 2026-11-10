@@ -153,12 +153,14 @@ const Dados = (() => {
     }
 
     idSessao = authData.session.user.id;
-    atual = { usuario: profile.usuario, nome: profile.nome, papel: profile.papel, unidade: profile.unidade };
+    atual = { usuario: profile.usuario, nome: profile.nome, papel: profile.papel, unidade: profile.unidade, master: profile.master === true };
+    supabaseClient.rpc("registrar_evento", { p_acao: "LOGIN" }); // log de acesso (não bloqueia a entrada)
     return { ...atual };
   }
 
   async function sair() {
     atual = null; idSessao = null; // antes do signOut, para não disparar o aviso de sessão perdida
+    await supabaseClient.rpc("registrar_evento", { p_acao: "LOGOUT" }); // ainda com a sessão ativa
     await supabaseClient.auth.signOut();
   }
 
@@ -212,7 +214,7 @@ const Dados = (() => {
     if (data && data.error) throw new Error(data.error);
 
     if (euMesmo) {
-      atual = { usuario: login.toLowerCase(), nome, papel: u.papel, unidade };
+      atual = { usuario: login.toLowerCase(), nome, papel: u.papel, unidade, master: atual.master };
     }
   }
 
@@ -453,6 +455,16 @@ const Dados = (() => {
     }
   }
 
+  /* ---------- Log de atividades (só o master; o banco também recusa os outros) ---------- */
+  async function log() {
+    exigirLogin();
+    if (!atual.master) throw new Error("Só o master vê o log.");
+    const { data, error } = await supabaseClient.from("log_atividades").select("*")
+      .order("quando", { ascending: false }).limit(500);
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
   /* ---------- Tempo real ---------- */
   // Avisa (aoMudar) quando algo muda nas tabelas. O banco só envia o que o usuário tem permissão de ler (RLS).
   // Ao reconectar depois de uma queda, avisa também, para a tela não ficar com dados velhos.
@@ -469,6 +481,6 @@ const Dados = (() => {
 
   return { 
     aoPerderSessao: aoPerderSessaoDefinir, observar, entrar, sair, sessao, usuarios, salvarUsuario, funcionarios, salvarFuncionario, unidades, carregarUnidades, fechamento,
-    statusPeriodo, statusLinhas, liberar, concluirLinha, encerrarFilial, reabrirFilial, lancamentos, salvarLancamento 
+    statusPeriodo, statusLinhas, liberar, concluirLinha, encerrarFilial, reabrirFilial, lancamentos, salvarLancamento, log
   };
 })();
