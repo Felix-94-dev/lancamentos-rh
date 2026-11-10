@@ -153,14 +153,12 @@ const Dados = (() => {
     }
 
     idSessao = authData.session.user.id;
-    atual = { usuario: profile.usuario, nome: profile.nome, papel: profile.papel, unidade: profile.unidade, master: profile.master === true };
-    supabaseClient.rpc("registrar_evento", { p_acao: "LOGIN" }); // log de acesso (não bloqueia a entrada)
+    atual = { usuario: profile.usuario, nome: profile.nome, papel: profile.papel, unidade: profile.unidade };
     return { ...atual };
   }
 
   async function sair() {
     atual = null; idSessao = null; // antes do signOut, para não disparar o aviso de sessão perdida
-    await supabaseClient.rpc("registrar_evento", { p_acao: "LOGOUT" }); // ainda com a sessão ativa
     await supabaseClient.auth.signOut();
   }
 
@@ -214,7 +212,7 @@ const Dados = (() => {
     if (data && data.error) throw new Error(data.error);
 
     if (euMesmo) {
-      atual = { usuario: login.toLowerCase(), nome, papel: u.papel, unidade, master: atual.master };
+      atual = { usuario: login.toLowerCase(), nome, papel: u.papel, unidade };
     }
   }
 
@@ -343,7 +341,8 @@ const Dados = (() => {
   async function encerrarFilial(comp, uni) {
     exigirLogin();
     if (!souMatriz()) throw new Error("Só a matriz encerra a filial.");
-    if ((await liberacao(comp, uni)) !== "aberto") throw new Error("Só dá para encerrar uma filial aberta para lançamento.");
+    const statusAtual = await statusPeriodo(comp, uni);
+    if (statusAtual !== "concluido") throw new Error("Só dá para encerrar quando todas as linhas estiverem concluídas.");
 
     // Foto do mês: nome, função, salário, lançamentos e contas como estão agora. O histórico lê daqui.
     const [funcs, vals] = await Promise.all([funcionarios(), lancamentos(comp, uni)]);
@@ -455,16 +454,6 @@ const Dados = (() => {
     }
   }
 
-  /* ---------- Log de atividades (só o master; o banco também recusa os outros) ---------- */
-  async function log() {
-    exigirLogin();
-    if (!atual.master) throw new Error("Só o master vê o log.");
-    const { data, error } = await supabaseClient.from("log_atividades").select("*")
-      .order("quando", { ascending: false }).limit(500);
-    if (error) throw new Error(error.message);
-    return data;
-  }
-
   /* ---------- Tempo real ---------- */
   // Avisa (aoMudar) quando algo muda nas tabelas. O banco só envia o que o usuário tem permissão de ler (RLS).
   // Ao reconectar depois de uma queda, avisa também, para a tela não ficar com dados velhos.
@@ -481,6 +470,6 @@ const Dados = (() => {
 
   return { 
     aoPerderSessao: aoPerderSessaoDefinir, observar, entrar, sair, sessao, usuarios, salvarUsuario, funcionarios, salvarFuncionario, unidades, carregarUnidades, fechamento,
-    statusPeriodo, statusLinhas, liberar, concluirLinha, encerrarFilial, reabrirFilial, lancamentos, salvarLancamento, log
+    statusPeriodo, statusLinhas, liberar, concluirLinha, encerrarFilial, reabrirFilial, lancamentos, salvarLancamento 
   };
 })();

@@ -214,8 +214,18 @@ html[data-tema="dark"] .lua { transform: none; opacity: 1; }
 .tabela-rolagem { overflow-x: auto; background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--linha); white-space: nowrap; }
-#caixa-tabela { max-height: calc(100vh - 230px); overflow: auto; }  /* barra de rolagem horizontal sempre visível, sem ir ao fim da página */
-#caixa-tabela th { position: sticky; top: 0; z-index: 1; }
+.tabela-rolagem {
+  max-height: calc(100vh - 230px);
+  overflow: auto;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+}
+.tabela-rolagem th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
 th { font-size: 13px; font-weight: 600; color: var(--suave); background: var(--fundo); }
 tbody tr:last-child td { border-bottom: 0; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -236,7 +246,6 @@ dialog::backdrop { background: rgba(27, 42, 36, .45); }
 
 /* Perfil lançador: esconde itens exclusivos da matriz (só visual; a trava real é no banco) */
 body[data-papel="lancador"] .so-matriz { display: none; }
-body:not([data-master="1"]) .so-master { display: none; }
 body[data-papel="matriz"] .so-lancador { display: none; }
 
 /* Satélite: lista de funcionários (amarelo = em aberto, verde = concluído) */
@@ -264,71 +273,37 @@ dialog.larga { width: min(720px, 92vw); max-height: 90vh; overflow: auto; }
 .interruptor__alavanca { width: 14px; height: 20px; border-radius: 3px; background: var(--suave); transform: translateY(9px); transition: transform .25s, background .25s; }
 .interruptor[data-ligado="true"] .interruptor__alavanca { transform: translateY(-9px); background: var(--verde); }
 .boneco { position: absolute; left: 0; bottom: 0; width: 44px; height: 88px; }
-.boneco svg { display: block; width: 100%; height: 100%; overflow: visible; transform-origin: 50% 100%; }
-.boneco__giro { width: 100%; height: 100%; transition: transform .18s ease-in-out; }   /* a meia-volta passa de lado, não vira de repente */
+.boneco svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.boneco__giro { width: 100%; height: 100%; }
 .boneco.volta .boneco__giro { transform: scaleX(-1); }                     /* na volta ele olha para a direita */
-/* Articulações: cada peça gira em torno do seu ponto (quadril, joelho, ombro, cotovelo, cintura, pescoço) */
-.boneco :is(.perna, .joelho, .braco, .cotovelo, .tronco, .cabeca) { transform-box: view-box; }
-.perna-a { transform-origin: 20px 51px; }   .joelho-a { transform-origin: 20px 64px; }
-.perna-b { transform-origin: 22.5px 51px; } .joelho-b { transform-origin: 22.5px 64px; }
-.braco { transform-origin: 22px 26px; }     .cotovelo { transform-origin: 22px 37px; }
-.tronco { transform-origin: 22px 52px; }    .cabeca { transform-origin: 22px 20px; }
-.boneco :is(.perna, .joelho, .braco, .cotovelo, .tronco, .cabeca) { transform: rotate(0deg); }
-.olho { transform-box: fill-box; transform-origin: 50% 50%; animation: pisca 3.6s infinite; }
-/* Caminhada: um ciclo completo = dois passos. A perna de trás começa meio ciclo adiantada; o braço balança contra a perna */
-.boneco.anda { --ciclo: calc(var(--passo, .4s) * 2); }
-.boneco.anda :is(.perna, .joelho, .braco, .cotovelo, .tronco, .cabeca) { animation-duration: var(--ciclo); animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
-.boneco.anda .perna    { animation-name: coxa; }
-.boneco.anda .joelho   { animation-name: joelho; }
-.boneco.anda .braco    { animation-name: bracada; }
-.boneco.anda .cotovelo { animation-name: cotovelada; }
-.boneco.anda .tronco   { animation-name: balanco; animation-duration: var(--passo, .4s); animation-direction: alternate; }
-.boneco.anda .cabeca   { animation-name: cabecada; animation-duration: var(--passo, .4s); animation-direction: alternate; }
-.boneco.anda :is(.perna-b, .joelho-b, .braco-a, .cotovelo-a) { animation-delay: calc(var(--passo, .4s) * -1); }
+.boneco :is(.perna-a, .perna-b, .braco-a, .braco-b) { transform-box: fill-box; transform-origin: 50% 0; }
+.boneco.anda :is(.perna-a, .braco-b) { animation: passo-a var(--passo, .4s) ease-in-out infinite alternate; }
+.boneco.anda :is(.perna-b, .braco-a) { animation: passo-b var(--passo, .4s) ease-in-out infinite alternate; }
 .boneco.anda svg { animation: pulinho calc(var(--passo, .4s) / 2) ease-in-out infinite alternate; }   /* um pulinho por passo */
 .boneco.anda .boneco__sombra { animation: sombra calc(var(--passo, .4s) / 2) ease-in-out infinite alternate; }
 .boneco__sombra { position: absolute; left: 50%; bottom: 4px; width: 38px; height: 8px; margin-left: -19px; border-radius: 50%; background: rgba(0, 0, 0, .28); filter: blur(1px); }
 html[data-tema="dark"] .boneco__sombra { background: rgba(0, 0, 0, .65); }
-.boneco.pula svg { animation: pulo .42s ease-out; }                           /* saltinho de satisfação depois de virar a luz */
-@keyframes coxa { 0% { transform: rotate(-24deg); } 50% { transform: rotate(24deg); } 100% { transform: rotate(-24deg); } }
-@keyframes joelho { 0% { transform: rotate(-4deg); } 25% { transform: rotate(-58deg); } 50% { transform: rotate(-6deg); } 85% { transform: rotate(-12deg); } 100% { transform: rotate(-4deg); } }
-@keyframes bracada { 0% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } 100% { transform: rotate(20deg); } }
-@keyframes cotovelada { 0% { transform: rotate(34deg); } 50% { transform: rotate(8deg); } 100% { transform: rotate(34deg); } }
-@keyframes balanco { from { transform: rotate(-4.5deg); } to { transform: rotate(-1.5deg); } }
-@keyframes cabecada { from { transform: rotate(1.5deg); } to { transform: rotate(-2deg); } }
+.boneco.alcanca .braco-a { transform: rotate(90deg); transition: transform .3s ease; }   /* braço estendido até o interruptor */
+@keyframes passo-a { from { transform: rotate(-28deg); } to { transform: rotate(28deg); } }
+@keyframes passo-b { from { transform: rotate(28deg); } to { transform: rotate(-28deg); } }
 @keyframes pulinho { to { transform: translateY(-3px); } }
 @keyframes sombra { to { transform: scaleX(.86); } }
-@keyframes pulo { 0% { transform: none; } 18% { transform: scale(1.06, .93); } 55% { transform: translateY(-13px) scale(.97, 1.04); } 100% { transform: none; } }
-@keyframes pisca { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
 
-/* Impressão: só a área montada pelos botões de imprimir (colunas, lote e contraprova) */
+/* Impressão: só a área montada pelo botão "Imprimir colunas" */
 .so-impressao { display: none; }
 @media print {
-  @page { size: A4 landscape; margin: 12mm 12mm 15mm;
-    @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 8pt sans-serif; color: #666; } } /* numeração: só em navegadores que suportam */
+  @page { size: A4 landscape; margin: 10mm; }
   body { background: #fff; }
   body > *:not(#area-impressao) { display: none !important; }
-  #area-impressao { display: block; color: #111; font-family: var(--fonte); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  #area-impressao h1 { font-size: 16pt; margin: 0 0 4px; padding-left: 10px; border-left: 5px solid #1E6B4E; color: #14503A; }
-  #area-impressao p { margin: 0 0 10px; font-size: 9pt; color: #333; }
-  #area-impressao table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
-  #area-impressao table.estreita { width: 88%; }                        /* poucas colunas: não esticar até a borda da folha */
-  #area-impressao table.compacta { font-size: 7pt; }                    /* muitas colunas: letra e espaços menores para caber na folha */
-  #area-impressao th, #area-impressao td { padding: 3.5px 8px; text-align: left; white-space: normal; }
-  #area-impressao thead { display: table-header-group; }                /* repete o cabeçalho em cada página */
-  #area-impressao tr { break-inside: avoid; }                           /* não corta uma linha ao meio entre páginas */
-  #area-impressao thead tr:last-child th { background: #E8F1EC; color: #14503A; font-size: 8.5pt; border-top: 1px solid #14503A; border-bottom: 1.5px solid #14503A; }
-  #area-impressao tbody td { border-bottom: .5pt solid #C9D3CE; font-variant-numeric: tabular-nums; }
-  #area-impressao tbody tr:nth-child(even) td { background: #F5F8F6; }
-  #area-impressao table.compacta th, #area-impressao table.compacta td { padding: 3px 2px; }
-  #area-impressao table.compacta thead tr:last-child th { font-size: 7pt; }
+  #area-impressao { display: block; color: #000; }
+  #area-impressao h1 { font-size: 14pt; margin: 0 0 4px; }
+  #area-impressao p { margin: 0 0 8px; font-size: 9pt; }
+  #area-impressao table { width: 100%; font-size: 8.5pt; }
+  #area-impressao th, #area-impressao td { border: 1px solid #000; padding: 3px 5px; white-space: normal; }
+  #area-impressao th { background: #eee; color: #000; }
+  #area-impressao thead { display: table-header-group; } /* repete o cabeçalho em cada página */
+  #area-impressao tr { break-inside: avoid; }             /* não corta uma linha ao meio entre páginas */
   #area-impressao .num { text-align: right; }
-  #area-impressao .doc-cab th { padding: 0 0 12px; background: none; border: 0; font-weight: 400; }
-  #area-impressao .doc-sup { font-size: 8pt; letter-spacing: .12em; text-transform: uppercase; color: #5C6B64; }
-  #area-impressao .doc-titulo { margin: 3px 0 7px; padding-left: 10px; border-left: 5px solid #1E6B4E; font-size: 20pt; font-weight: 700; line-height: 1.15; color: #14503A; }
-  #area-impressao .doc-meta { font-size: 9pt; color: #333; }
-  #area-impressao .doc-meta span + span::before { content: "·"; margin: 0 8px; color: #888; }
-  #area-impressao section + section { break-before: page; }           /* cada bloco do lote começa em página nova */
 }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

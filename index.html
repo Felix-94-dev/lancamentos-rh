@@ -57,7 +57,6 @@
         <button class="aba so-matriz" data-aba="funcionarios">Funcionários</button>
         <button class="aba" data-aba="lancamentos">Lançamentos</button>
         <button class="aba so-matriz" data-aba="usuarios">Usuários</button>
-        <button class="aba so-master" data-aba="log">Log</button>
       </nav>
       <button id="btn-atualizar" class="btn" title="Recarregar os dados da tela atual">Atualizar</button>
       <button id="btn-tema" class="btn btn--tema" title="Alternar entre tema claro e escuro">
@@ -80,7 +79,7 @@
           <select id="filtro-filial" aria-label="Filtrar por filial"></select>
           <button id="btn-novo-func" class="btn btn--primario">Novo funcionário</button>
         </div>
-        <div class="tabela-rolagem">
+        <div class="tabela-rolagem" style="max-height: calc(100vh - 230px); overflow: auto;">
           <table>
             <thead>
               <tr><th>Matrícula</th><th>Nome</th><th>Função</th><th>Filial</th><th class="num">Salário</th><th>Situação</th><th></th></tr>
@@ -98,9 +97,7 @@
           <span id="status-periodo" class="status"></span>
           <span id="contagem" class="contagem"></span>
           <span id="acoes" class="acoes"></span>
-          <input id="busca-lanc" class="so-lancador" type="search" placeholder="Buscar por nome ou matrícula">
           <button id="btn-imprimir" class="btn so-matriz" type="button">Imprimir colunas</button>
-          <button id="btn-imprimir-lote" class="btn so-matriz" type="button">Imprimir lote</button>
           <button id="btn-contraprova" class="btn so-lancador" type="button" title="Imprime ou salva em PDF o lançamento, com todos os nomes e colunas">Salvar contraprova</button>
         </div>
         <p id="msg-lanc" class="aviso" role="status" hidden></p>
@@ -128,20 +125,6 @@
               <tr><th>Login</th><th>Nome</th><th>Perfil</th><th>Unidade</th><th>Situação</th><th></th></tr>
             </thead>
             <tbody id="corpo-usuarios"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Aba: log de atividades (só a matriz) -->
-      <section id="aba-log" hidden>
-        <div class="barra">
-          <input id="busca-log" type="search" placeholder="Filtrar por usuário, ação, tabela ou detalhe">
-        </div>
-        <p id="msg-log" class="aviso" role="status" hidden></p>
-        <div class="tabela-rolagem">
-          <table>
-            <thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Tabela</th><th>Detalhe</th></tr></thead>
-            <tbody id="corpo-log"></tbody>
           </table>
         </div>
       </section>
@@ -240,22 +223,15 @@
   <div id="cena" class="cena" aria-hidden="true" hidden>
     <div id="interruptor" class="interruptor" data-ligado="true"><span class="interruptor__alavanca"></span></div>
     <div id="boneco" class="boneco"><span class="boneco__sombra"></span><div class="boneco__giro">
-      <!-- Pernas e braços têm duas partes (coxa/joelho, braço/cotovelo); o tronco e a cabeça balançam junto -->
       <svg viewBox="0 0 44 88">
-        <g class="perna perna-b"><rect x="19.5" y="50" width="6" height="15" rx="3" fill="var(--suave)"/><g class="joelho joelho-b"><rect x="19.7" y="62.5" width="5.6" height="15.5" rx="2.8" fill="var(--suave)"/><rect x="15.5" y="76" width="10.5" height="4.4" rx="2.2" fill="var(--suave)"/></g></g>
-        <g class="perna perna-a"><rect x="17" y="50" width="6" height="15" rx="3" fill="var(--tinta)"/><g class="joelho joelho-a"><rect x="17.2" y="62.5" width="5.6" height="15.5" rx="2.8" fill="var(--tinta)"/><rect x="13" y="76" width="10.5" height="4.4" rx="2.2" fill="var(--tinta)"/></g></g>
-        <g class="tronco">
-          <g class="braco braco-b"><rect x="19.5" y="24" width="5" height="14.5" rx="2.5" fill="var(--verde-escuro)"/><g class="cotovelo cotovelo-b"><rect x="19.7" y="36" width="4.6" height="12" rx="2.3" fill="#C99A70"/><circle cx="22" cy="48" r="2.6" fill="#C99A70"/></g></g>
-          <rect x="14" y="21" width="16" height="32" rx="6" fill="var(--verde)"/>
-          <g class="cabeca">
-            <circle cx="25.6" cy="12.8" r="1.8" fill="#D4A47C"/>
-            <circle cx="22" cy="11" r="9" fill="#E8B98D"/>
-            <path d="M13 10a9 9 0 0 1 18 0z" fill="var(--verde-escuro)"/><rect x="8" y="8.5" width="10" height="3" rx="1.5" fill="var(--verde-escuro)"/>
-            <ellipse class="olho" cx="17" cy="14" rx="1.3" ry="1.5" fill="#1B2A24"/>
-            <path d="M14.6 18a2.6 2.2 0 0 0 3.8 0" fill="none" stroke="#8A5A3C" stroke-width=".9" stroke-linecap="round"/>
-          </g>
-          <g class="braco braco-a"><rect x="19.5" y="24" width="5" height="14.5" rx="2.5" fill="var(--verde-escuro)"/><g class="cotovelo cotovelo-a"><rect x="19.7" y="36" width="4.6" height="12" rx="2.3" fill="#E8B98D"/><circle cx="22" cy="48" r="2.6" fill="#E8B98D"/></g></g>
-        </g>
+        <g class="perna-b"><rect x="21" y="50" width="6" height="28" rx="3" fill="var(--suave)"/><rect x="17" y="76" width="10" height="4" rx="2" fill="var(--suave)"/></g>
+        <g class="perna-a"><rect x="17" y="50" width="6" height="28" rx="3" fill="var(--tinta)"/><rect x="13" y="76" width="10" height="4" rx="2" fill="var(--tinta)"/></g>
+        <rect class="braco-b" x="19.5" y="24" width="5" height="24" rx="2.5" fill="#C99A70"/>
+        <rect x="14" y="21" width="16" height="32" rx="6" fill="var(--verde)"/>
+        <circle cx="22" cy="11" r="9" fill="#E8B98D"/>
+        <path d="M13 10a9 9 0 0 1 18 0z" fill="var(--verde-escuro)"/><rect x="8" y="8.5" width="10" height="3" rx="1.5" fill="var(--verde-escuro)"/>
+        <circle cx="17" cy="14" r="1.3" fill="#1B2A24"/>
+        <rect class="braco-a" x="19.5" y="24" width="5" height="24" rx="2.5" fill="#E8B98D"/>
       </svg>
     </div></div>
   </div>
