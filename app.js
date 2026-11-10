@@ -12,6 +12,20 @@ const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) =>
 const moeda = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const NOMES_STATUS = { fechado: "Fechado", aberto: "Aberto para lançamento", concluido: "Concluído", encerrado: "Encerrado pela matriz" };
 const IMPRIME = ["concluido", "encerrado"]; // status em que a matriz pode imprimir (todas as linhas concluídas)
+/* "Imprimir lote": cada item é uma impressão (começa em página nova); as colunas do mesmo item saem juntas.
+   Use os ids das colunas (ver COLUNAS e CONTAS em dados.js). */
+const LOTE = [
+  ["atrasos442"],            // 442 - Horas de atrasos
+  ["feriado012"],            // 012 - Valor feriado
+  ["premio110"],             // 110 - Prêmio h. extra acima de 60
+  ["dobras114"],             // 114 - Valor das dobras
+  ["nHE103"],                // 103 - Nº h. extras
+  ["premioGranja"],          // 109 - Prêmio só da granja
+  ["heAte60"],               // 103 - H. extra até 60 hs
+  ["faltas409"],             // 409 - Faltas dia
+  ["nice"],                  // Controle Nice
+  ["prod117", "dsr119"],     // 117 - Prod + 119 - DSR prod (juntas, na mesma página)
+];
 
 let usuario = null;      // usuário logado
 let calculosFixos = null;   // contas gravadas no encerramento { matrícula: contas }; null = calcula na hora
@@ -67,6 +81,7 @@ async function iniciarApp() {
   $("#login-carregando").hidden = false;   // bolinhas até a tela principal estar pronta
   try {
     document.body.dataset.papel = usuario.papel; // o CSS usa isto para esconder itens da matriz
+    document.body.dataset.master = usuario.master ? "1" : ""; // e isto para esconder o que é só do master
     $("#usuario-info").textContent = usuario.nome;
 
     // Competência padrão = mês atual (formato AAAA-MM)
@@ -110,10 +125,34 @@ function abrirAba(nome) {
   $("#aba-funcionarios").hidden = nome !== "funcionarios";
   $("#aba-lancamentos").hidden = nome !== "lancamentos";
   $("#aba-usuarios").hidden = nome !== "usuarios";
+  $("#aba-log").hidden = nome !== "log";
   if (nome === "funcionarios") return carregarFuncionarios();
   if (nome === "usuarios") return carregarUsuarios();
+  if (nome === "log") return carregarLog();
   return carregarLancamentos();
 }
+
+/* ---------- Aba Log (matriz): quem fez o quê ---------- */
+let logCache = [];
+async function carregarLog() {
+  try {
+    logCache = await Dados.log();
+    $("#msg-log").hidden = true;
+    desenharLog();
+  } catch (err) { $("#msg-log").textContent = err.message; $("#msg-log").hidden = false; }
+}
+function desenharLog() {
+  const termo = $("#busca-log").value.trim().toLowerCase();
+  const lista = logCache.filter((l) =>
+    `${l.usuario} ${l.acao} ${l.tabela} ${JSON.stringify(l.detalhe)}`.toLowerCase().includes(termo));
+  $("#corpo-log").innerHTML = lista.length ? lista.map((l) => `
+    <tr>
+      <td>${new Date(l.quando).toLocaleString("pt-BR")}</td><td>${esc(l.usuario)}</td>
+      <td>${esc(l.acao)}</td><td>${esc(l.tabela || "—")}</td>
+      <td>${esc(l.detalhe ? JSON.stringify(l.detalhe) : "")}</td>
+    </tr>`).join("") : `<tr><td colspan="5">Nenhum registro.</td></tr>`;
+}
+$("#busca-log").addEventListener("input", desenharLog);
 
 /* ---------- Aba Usuários (matriz): logins e senhas ---------- */
 let usuariosCache = [];
@@ -364,8 +403,10 @@ async function carregarLancamentos() {
     $("#contagem").textContent = status === "fechado" ? "" : `${concluidas} de ${lista.length} linhas concluídas`;
     desenharAcoes(status, comp, uni);
     // Imprimir: só a matriz, e só quando a filial concluiu todas as linhas
-    $("#btn-imprimir").disabled = !IMPRIME.includes(status);
-    $("#btn-imprimir").title = IMPRIME.includes(status) ? "" : "Disponível quando a filial concluir todas as linhas";
+    for (const b of document.querySelectorAll("#btn-imprimir, #btn-imprimir-lote")) {
+      b.disabled = !IMPRIME.includes(status);
+      b.title = IMPRIME.includes(status) ? "" : "Disponível quando a filial concluir todas as linhas";
+    }
     $("#btn-contraprova").disabled = status === "fechado";
     $("#caixa-tabela").hidden = !matriz;
     $("#lista-satelite").hidden = matriz;
@@ -405,7 +446,9 @@ async function carregarLancamentos() {
 
 /* ---------- Satélite: lista de funcionários e formulário ---------- */
 function desenharListaSatelite() {
-  const { status, linhas, lista } = ctxSat;
+  const { status, linhas } = ctxSat;
+  const termo = $("#busca-lanc").value.trim().toLowerCase();
+  const lista = ctxSat.lista.filter((f) => f.nome.toLowerCase().includes(termo) || f.codigo.toLowerCase().includes(termo));
   $("#lista-satelite").innerHTML = lista.length ? lista.map((f) => {
     const ok = linhas[f.codigo] === "concluido";
     const cls = status === "fechado" ? "" : ok ? "linha-func--ok" : "linha-func--aberta";
@@ -413,8 +456,9 @@ function desenharListaSatelite() {
       : ok ? "Concluído (pode alterar)" : "Em aberto";
     return `<button type="button" class="linha-func ${cls}" data-abrir="${esc(f.codigo)}" ${status === "fechado" ? "disabled" : ""}>
       <strong>${esc(f.nome)}</strong><span>Matrícula ${esc(f.codigo)} - ${esc(f.funcao)}</span><em>${texto}</em></button>`;
-  }).join("") : "<p>Nenhum funcionário ativo nesta unidade.</p>";
+  }).join("") : "<p>Nenhum funcionário encontrado.</p>";
 }
+$("#busca-lanc").addEventListener("input", desenharListaSatelite);
 $("#lista-satelite").addEventListener("click", (e) => {
   const b = e.target.closest("[data-abrir]");
   if (b) abrirFormulario(b.dataset.abrir);
@@ -500,8 +544,8 @@ function temDadoNasColunas(tr, ids) {
   });
 }
 
-/* Monta uma tabela só com as colunas marcadas (na ordem da matriz) e as linhas escolhidas, e chama a impressão */
-function imprimirColunas(ids, comp, uni, linhas, totalFuncionarios) {
+/* Monta (em HTML) uma tabela só com as colunas dadas (na ordem da matriz) e as linhas escolhidas */
+function tabelaColunas(ids, comp, uni, linhas, totalFuncionarios) {
   const ths = [...document.querySelectorAll("#cab-lanc th")].filter((t) => ["matricula", "nome", ...ids].includes(t.dataset.col));
   const valorDe = (tr, t) => {
     if (t.dataset.col === "matricula") return tr.dataset.cod;
@@ -511,13 +555,39 @@ function imprimirColunas(ids, comp, uni, linhas, totalFuncionarios) {
     return i.type === "text" ? i.value : fmt(i.value, td.dataset.un);
   };
   const resumo = linhas.length === totalFuncionarios ? `${linhas.length} funcionários`
-    : `${linhas.length} de ${totalFuncionarios} funcionários (só os que têm dados nas colunas)`;
-  $("#area-impressao").innerHTML = `<h1>Lançamentos de pessoal</h1>
-    <p>Filial: ${esc(uni)} - Competência: ${esc(comp.split("-").reverse().join("/"))} - ${esc(resumo)} - Emitido em ${esc(new Date().toLocaleString("pt-BR"))} por ${esc(usuario.nome)}</p>
-    <table><thead><tr>${ths.map((t) => `<th class="${t.classList.contains("num") ? "num" : ""}">${esc(t.textContent.trim())}</th>`).join("")}</tr></thead>
-    <tbody>${linhas.map((tr) => "<tr>" + ths.map((t) => `<td class="${t.classList.contains("num") ? "num" : ""}">${esc(valorDe(tr, t))}</td>`).join("") + "</tr>").join("")}</tbody></table>`;
+    : `${linhas.length} de ${totalFuncionarios} funcionários (só os que têm dados)`;
+  const rotulos = ths.filter((t) => ids.includes(t.dataset.col)).map((t) => t.textContent.trim());
+  const titulo = rotulos.length <= 2 ? rotulos.join("  +  ") : "Colunas selecionadas";
+  const cel = (t, tag, conteudo) => `<${tag} class="${t.classList.contains("num") ? "num" : ""}">${esc(conteudo)}</${tag}>`;
+  return `<section><table class="${ids.length <= 2 ? "estreita" : ids.length > 6 ? "compacta" : ""}"><thead>
+    <tr class="doc-cab"><th colspan="${ths.length}">
+      <div class="doc-sup">Lançamentos de pessoal</div>
+      <div class="doc-titulo">${esc(titulo)}</div>
+      <div class="doc-meta"><span>Filial <b>${esc(uni)}</b></span><span>Competência <b>${esc(comp.split("-").reverse().join("/"))}</b></span><span>${esc(resumo)}</span><span>Emitido em ${esc(new Date().toLocaleString("pt-BR"))} por ${esc(usuario.nome)}</span></div>
+    </th></tr>
+    <tr>${ths.map((t) => cel(t, "th", t.textContent.trim())).join("")}</tr></thead>
+    <tbody>${linhas.map((tr) => "<tr>" + ths.map((t) => cel(t, "td", valorDe(tr, t))).join("") + "</tr>").join("")}</tbody></table></section>`;
+}
+function imprimirColunas(ids, comp, uni, linhas, totalFuncionarios) {
+  $("#area-impressao").innerHTML = tabelaColunas(ids, comp, uni, linhas, totalFuncionarios);
   window.print();
 }
+
+/* Lote: uma única impressão com um bloco por item de LOTE, cada um em página nova.
+   Só entram os funcionários que têm dado nas colunas do bloco; blocos sem nenhum dado são pulados. */
+$("#btn-imprimir-lote").addEventListener("click", async () => {
+  const comp = $("#competencia").value, uni = $("#unidade").value;
+  try {
+    if (!IMPRIME.includes(await Dados.statusPeriodo(comp, uni))) throw new Error("A filial ainda não concluiu todas as linhas.");
+    const todas = [...document.querySelectorAll("#corpo-lanc tr[data-cod]")];
+    const blocos = LOTE.map((ids) => [ids, todas.filter((tr) => temDadoNasColunas(tr, ids))])
+      .filter(([, linhas]) => linhas.length)
+      .map(([ids, linhas]) => tabelaColunas(ids, comp, uni, linhas, todas.length));
+    if (!blocos.length) throw new Error("Nenhum funcionário tem dados nas colunas do lote.");
+    $("#area-impressao").innerHTML = blocos.join("");
+    window.print();
+  } catch (err) { mostrarMsg(err.message); }
+});
 
 /* ---------- Satélite: contraprova (cópia do lançamento) ----------
    Imprime (ou salva em PDF) TODOS os funcionários ativos da unidade e TODAS as colunas lançadas,
@@ -544,16 +614,14 @@ $("#btn-contraprova").addEventListener("click", async () => {
    A conclusão agora é por linha (formulário do lançador); a filial fica "concluída" quando todas as linhas estão. */
 function desenharAcoes(status, comp, uni) {
   const matriz = usuario.papel === "matriz";
+  const encerrar = ["Encerrar filial", async () => {
+    if (!confirm("Encerrar esta filial? A unidade não poderá mais alterar nenhum dado (você pode reabrir depois).")) return;
+    await Dados.encerrarFilial(comp, uni);
+  }, true];
   const acoes = {
     fechado:   matriz ? [["Liberar para lançamento", () => Dados.liberar(comp, uni), true]] : [],
-    aberto:    [],
-    concluido: matriz ? [
-      ["Encerrar filial", async () => {
-        if (!confirm("Encerrar esta filial? A unidade não poderá mais alterar nenhum dado (você pode reabrir depois).")) return;
-        await Dados.encerrarFilial(comp, uni);
-      }, true],
-      ["Reabrir filial", () => Dados.reabrirFilial(comp, uni), false],
-    ] : [],
+    aberto:    matriz ? [encerrar] : [],
+    concluido: matriz ? [encerrar, ["Reabrir filial", () => Dados.reabrirFilial(comp, uni), false]] : [],
     encerrado: matriz ? [["Reabrir filial", () => Dados.reabrirFilial(comp, uni), false]] : [],
   }[status];
 
@@ -586,6 +654,7 @@ function atualizarTela() {
   if (!usuario) return;
   if (abaAtual === "funcionarios") carregarFuncionarios();
   else if (abaAtual === "usuarios") carregarUsuarios();
+  else if (abaAtual === "log") carregarLog();
   else carregarLancamentos();
 }
 $("#btn-atualizar").addEventListener("click", atualizarTela);
@@ -651,27 +720,63 @@ async function cenaInterruptor(escurecer) {
   const boneco = $("#boneco"), cena = $("#cena"), inter = $("#interruptor");
   const PARADA = 42, FORA = innerWidth + 60;
   const VELOCIDADE = 0.28;                           // px por ms: para ele andar mais devagar, diminua
-  const ms = Math.min(5000, Math.max(2200, (FORA - PARADA) / VELOCIDADE));
+  const FREIO = { ms: 400, px: 56 };                 // ele desacelera ao chegar e acelera ao sair (px = v·t/2, sem tranco)
+  const ms = Math.min(5000, Math.max(2200, (FORA - PARADA - FREIO.px) / VELOCIDADE + FREIO.ms));
   // a cadência dos passos acompanha a velocidade real (cerca de 70px por passo), para o pé não "escorregar"
   boneco.style.setProperty("--passo", Math.min(450, Math.max(260, 70 / ((FORA - PARADA) / ms))) + "ms");
-  const andar = (de, ate) => boneco.animate(
-    [{ transform: `translateX(${de}px)` }, { transform: `translateX(${ate}px)` }],
-    { duration: ms, easing: "linear", fill: "forwards" }).finished;
+  const t = FREIO.ms / ms;
+  const chegar = () => boneco.animate([
+    { transform: `translateX(${FORA}px)`, offset: 0, easing: "linear" },
+    { transform: `translateX(${PARADA + FREIO.px}px)`, offset: 1 - t, easing: "cubic-bezier(.5, 1, .89, 1)" },
+    { transform: `translateX(${PARADA}px)`, offset: 1 }], { duration: ms, fill: "forwards" }).finished;
+  const sair = () => boneco.animate([
+    { transform: `translateX(${PARADA}px)`, offset: 0, easing: "cubic-bezier(.11, 0, .5, 0)" },
+    { transform: `translateX(${PARADA + FREIO.px}px)`, offset: t, easing: "linear" },
+    { transform: `translateX(${FORA}px)`, offset: 1 }], { duration: ms, fill: "forwards" }).finished;
+
+  // Poses: congela a caminhada onde ela estiver e leva cada articulação até o ângulo pedido (sem estalo)
+  const partes = [...boneco.querySelectorAll(".perna, .joelho, .braco, .cotovelo, .tronco, .cabeca")];
+  const congelar = () => {
+    const atuais = partes.map((el) => getComputedStyle(el).transform);
+    partes.forEach((el, i) => { el.style.animation = "none"; el.style.transform = atuais[i]; });
+    void boneco.offsetWidth;
+  };
+  const soltar = () => partes.forEach((el) => { el.style.animation = ""; el.style.transform = ""; el.style.transition = ""; });
+  const pose = (angulos, dur) => {
+    for (const [classe, graus] of Object.entries(angulos)) {
+      const el = boneco.querySelector("." + classe);
+      el.style.transition = `transform ${dur}ms ease-in-out`;
+      el.style.transform = `rotate(${graus}deg)`;
+    }
+  };
+  const PARADO = { "perna-a": 5, "perna-b": -6, "joelho-a": -3, "joelho-b": -3, "braco-a": 0, "braco-b": 0, "cotovelo-a": 8, "cotovelo-b": 8, tronco: 0, cabeca: 0 };
 
   inter.dataset.ligado = String(escurecer);          // quem vai apagar encontra a luz acesa (e vice-versa)
   boneco.className = "boneco anda";
   cena.hidden = false;
-  await andar(FORA, PARADA);                         // da direita para a esquerda
-  boneco.className = "boneco alcanca";
-  await dormindo(350);
+  await chegar();                                    // da direita para a esquerda, freando no fim
+  congelar();
+  boneco.className = "boneco";
+  pose({ ...PARADO, "braco-a": 82, "cotovelo-a": 14, "braco-b": 10, "cotovelo-b": 20, tronco: -6, cabeca: -4 }, 320);   // inclina e estende o braço
+  await dormindo(420);
+  pose({ "braco-a": 90, "cotovelo-a": 2, tronco: -8 }, 110);                      // empurra a alavanca
+  await dormindo(90);
   inter.dataset.ligado = String(!escurecer);         // vira o interruptor
   raiz.classList.add("trocando");
   aplicarTema(escurecer);
-  await dormindo(500);
+  await dormindo(160);
+  boneco.className = "boneco pula";                  // saltinho de satisfação, braço solto
+  pose({ ...PARADO, "cotovelo-a": 22, "braco-b": -8, cabeca: 3 }, 300);
+  await dormindo(340);
   raiz.classList.remove("trocando");
+  boneco.className = "boneco volta";                 // vira de lado; no meio da meia-volta (quase sem largura) retoma a caminhada
+  await dormindo(90);
+  soltar();
   boneco.className = "boneco anda volta";
-  await andar(PARADA, FORA);                         // vai embora
+  await sair();                                      // vai embora, acelerando
   boneco.getAnimations().forEach((x) => x.cancel());
+  soltar();
+  boneco.className = "boneco";
   cena.hidden = true;
 }
 
