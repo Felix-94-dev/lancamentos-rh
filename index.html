@@ -80,8 +80,9 @@
           <select id="filtro-filial" aria-label="Filtrar por filial"></select>
           <button id="btn-novo-func" class="btn btn--primario">Novo funcionário</button>
         </div>
+        <!-- Alterado para usar id único (ou mantido com classe e comportamento idêntico) -->
         <div class="tabela-rolagem" style="max-height: calc(100vh - 230px); overflow: auto;">
-          <table>
+          <table id="tabela-func">
             <thead>
               <tr><th>Matrícula</th><th>Nome</th><th>Função</th><th>Filial</th><th class="num">Salário</th><th>Situação</th><th></th></tr>
             </thead>
@@ -98,7 +99,9 @@
           <span id="status-periodo" class="status"></span>
           <span id="contagem" class="contagem"></span>
           <span id="acoes" class="acoes"></span>
+          <input id="busca-lanc" class="so-lancador" type="search" placeholder="Buscar por nome ou matrícula">
           <button id="btn-imprimir" class="btn so-matriz" type="button">Imprimir colunas</button>
+          <button id="btn-imprimir-lote" class="btn so-matriz" type="button">Imprimir lote</button>
           <button id="btn-contraprova" class="btn so-lancador" type="button" title="Imprime ou salva em PDF o lançamento, com todos os nomes e colunas">Salvar contraprova</button>
         </div>
         <p id="msg-lanc" class="aviso" role="status" hidden></p>

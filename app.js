@@ -173,7 +173,7 @@ function desenharUsuarios() {
   $("#corpo-usuarios").innerHTML = lista.length ? lista.map((u) => `
     <tr class="${u.ativo ? "" : "inativo"}">
       <td>${esc(u.usuario)}</td><td>${esc(u.nome)}</td>
-      <td>${u.papel === "matriz" ? "Matriz" : "Lançador"}</td><td>${esc(u.unidade || "—")}</td>
+      <td>${u.master ? "Master" : u.papel === "matriz" ? "Matriz" : "Lançador"}</td><td>${esc(u.unidade || "—")}</td>
       <td>${u.ativo ? "Ativo" : "Desativado"}</td>
       <td><button class="btn" data-editar-usuario="${esc(u.usuario)}">Editar</button></td>
     </tr>`).join("") : `<tr><td colspan="6">Nenhum usuário encontrado.</td></tr>`;
@@ -181,7 +181,15 @@ function desenharUsuarios() {
 $("#busca-usuario").addEventListener("input", desenharUsuarios);
 $("#corpo-usuarios").addEventListener("click", (e) => {
   const login = e.target.dataset.editarUsuario;
-  if (login) abrirDialogoUsuario(usuariosCache.find((u) => u.usuario === login));
+  if (!login) return;
+  const alvo = usuariosCache.find((u) => u.usuario === login);
+  if (alvo.master && !usuario.master) { // o banco também recusa; aqui só avisa antes
+    $("#msg-usuarios").textContent = "Sem permissão: só o master pode alterar os dados do usuário master.";
+    $("#msg-usuarios").hidden = false;
+    return;
+  }
+  $("#msg-usuarios").hidden = true;
+  abrirDialogoUsuario(alvo);
 });
 
 /* A unidade só se aplica ao perfil Lançador */
