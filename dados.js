@@ -226,7 +226,12 @@ const Dados = (() => {
       const dados = await buscarTudo(() => supabaseClient.rpc("listar_funcionarios_matriz").order("codigo"));
       return dados.map((f) => ({ ...f }));
     }
-    // Lançador: o banco nem entrega a coluna salario (por isso as colunas são listadas, sem "*").
+    // Lançador: o salário vem da função listar_funcionarios_lancador (só da unidade dele; ver liberar-salario-lancador.sql).
+    // Se a função ainda não existe no banco, cai no modo antigo (sem salário) para a tela não quebrar.
+    const { data: comSalario, error: errSal } = await supabaseClient.rpc("listar_funcionarios_lancador");
+    if (!errSal && Array.isArray(comSalario)) {
+      return comSalario.filter((f) => f.unidade === atual.unidade).sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), "pt-BR", { numeric: true }));
+    }
     const dados = await buscarTudo(() => supabaseClient
       .from("funcionarios")
       .select("codigo, nome, funcao, unidade, ativo")

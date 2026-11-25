@@ -463,7 +463,7 @@ function desenharListaSatelite() {
     const texto = status === "fechado" ? "Aguardando liberação" : status === "encerrado" ? "Encerrado (somente consulta)"
       : ok ? "Concluído (pode alterar)" : "Em aberto";
     return `<button type="button" class="linha-func ${cls}" data-abrir="${esc(f.codigo)}" ${status === "fechado" ? "disabled" : ""}>
-      <strong>${esc(f.nome)}</strong><span>Matrícula ${esc(f.codigo)} - ${esc(f.funcao)}</span><em>${texto}</em></button>`;
+      <strong>${esc(f.nome)}</strong><span>Matrícula ${esc(f.codigo)} - ${esc(f.funcao)}${f.salario != null ? " - Salário " + moeda(f.salario) : ""}</span><em>${texto}</em></button>`;
   }).join("") : "<p>Nenhum funcionário encontrado.</p>";
 }
 $("#busca-lanc").addEventListener("input", desenharListaSatelite);
@@ -478,7 +478,7 @@ function abrirFormulario(cod) {
   const travado = status === "encerrado"; // só a matriz encerrando trava; linha concluída continua editável
   codigoAberto = cod; falhas.clear();
   $("#lanc-titulo").textContent = f.nome;
-  $("#lanc-sub").textContent = `Matrícula ${f.codigo} - ${f.funcao} - ` +
+  $("#lanc-sub").textContent = `Matrícula ${f.codigo} - ${f.funcao}${f.salario != null ? " - Salário " + moeda(f.salario) : ""} - ` +
     (travado ? "filial encerrada pela matriz (somente leitura)"
       : ok ? "concluído; cada campo alterado é salvo ao sair dele, até a matriz encerrar a filial"
       : "cada campo é salvo ao sair dele; só vira verde ao clicar em Concluído");
